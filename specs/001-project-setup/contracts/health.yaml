@@ -1,0 +1,77 @@
+openapi: 3.1.0
+info:
+  title: Todo AI Chatbot - Health API
+  description: Health check endpoint for system monitoring
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8000
+    description: Local development server
+
+paths:
+  /health:
+    get:
+      summary: Health Check
+      description: Returns the health status of the server and database connection
+      operationId: getHealth
+      tags:
+        - System
+      responses:
+        '200':
+          description: System is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+              example:
+                status: healthy
+                server: running
+                database: connected
+                timestamp: '2026-01-19T12:00:00Z'
+        '503':
+          description: System is unhealthy (database connection failed)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+              example:
+                status: unhealthy
+                server: running
+                database: disconnected
+                timestamp: '2026-01-19T12:00:00Z'
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      required:
+        - status
+        - server
+        - database
+        - timestamp
+      properties:
+        status:
+          type: string
+          enum:
+            - healthy
+            - unhealthy
+          description: Overall system health status
+        server:
+          type: string
+          enum:
+            - running
+          description: Server operational status
+        database:
+          type: string
+          enum:
+            - connected
+            - disconnected
+          description: Database connection status
+        timestamp:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp of the health check
+
+tags:
+  - name: System
+    description: System monitoring and health check endpoints

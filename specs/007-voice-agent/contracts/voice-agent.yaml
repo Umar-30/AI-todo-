@@ -1,0 +1,166 @@
+openapi: 3.1.0
+info:
+  title: Voice Agent API
+  version: 1.0.0
+  description: Voice-based AI agent endpoint for Todo AI Chatbot
+
+paths:
+  /api/{user_id}/voice-agent:
+    post:
+      operationId: voiceAgent
+      summary: Process voice input and return voice response
+      description: |
+        Accepts audio input, transcribes to text, processes through AI agent,
+        and returns synthesized audio response along with metadata.
+      tags:
+        - Voice
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          description: User's unique identifier
+          schema:
+            type: string
+            minLength: 1
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/VoiceRequest'
+      responses:
+        '200':
+          description: Successful voice response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoiceResponse'
+        '400':
+          description: Bad request (invalid audio format or size)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Access denied (conversation belongs to different user)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Conversation not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '413':
+          description: Audio file too large (max 25MB)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: Voice service unavailable (STT/TTS failure)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoiceResponse'
+
+components:
+  schemas:
+    VoiceRequest:
+      type: object
+      required:
+        - audio
+      properties:
+        audio:
+          type: string
+          format: binary
+          description: Audio file (WebM, WAV, MP3, M4A). Max 25MB.
+        conversation_id:
+          type: string
+          format: uuid
+          description: Existing conversation ID to continue (optional)
+          nullable: true
+
+    VoiceResponse:
+      type: object
+      required:
+        - conversation_id
+        - assistant_audio
+        - response_text
+        - tool_calls
+      properties:
+        conversation_id:
+          type: string
+          format: uuid
+          description: Conversation identifier (new or existing)
+        assistant_audio:
+          type: string
+          description: Base64-encoded MP3 audio of agent response
+        transcript:
+          type: string
+          description: Transcribed text from user's speech (null if transcription failed)
+          nullable: true
+        response_text:
+          type: string
+          description: Agent's text response
+        tool_calls:
+          type: array
+          items:
+            $ref: '#/components/schemas/ToolCallInfo'
+          description: List of MCP tools invoked during processing
+        error:
+          $ref: '#/components/schemas/VoiceError'
+          description: Error details if voice processing partially failed
+          nullable: true
+
+    ToolCallInfo:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          description: Name of the tool called (e.g., "add_task", "list_tasks")
+        arguments:
+          type: object
+          additionalProperties: true
+          description: Arguments passed to the tool
+        result:
+          description: Result returned by the tool
+          nullable: true
+
+    VoiceError:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          enum:
+            - TRANSCRIPTION_FAILED
+            - TTS_FAILED
+            - AUDIO_INVALID
+            - AUDIO_TOO_LARGE
+            - AUDIO_TOO_SHORT
+          description: Error code for client handling
+        message:
+          type: string
+          description: Human-readable error message
+
+    ErrorResponse:
+      type: object
+      required:
+        - detail
+      properties:
+        detail:
+          type: string
+          description: Error message

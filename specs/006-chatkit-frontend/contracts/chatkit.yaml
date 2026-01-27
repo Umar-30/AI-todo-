@@ -1,0 +1,158 @@
+openapi: 3.1.0
+info:
+  title: ChatKit Backend API
+  description: ChatKit Python SDK endpoint for Todo AI Chatbot
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8000
+    description: Development server
+
+paths:
+  /chatkit:
+    post:
+      operationId: chatkit
+      summary: ChatKit message endpoint
+      description: |
+        Receives messages from ChatKit frontend and returns streamed responses.
+        This endpoint implements the ChatKit Python SDK protocol.
+      tags:
+        - ChatKit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatKitRequest'
+      responses:
+        '200':
+          description: Successful response (streamed or JSON)
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: Server-Sent Events stream of ChatKit events
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatKitResponse'
+        '400':
+          description: Bad request - invalid message format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - invalid domain key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    ChatKitRequest:
+      type: object
+      description: ChatKit SDK request format
+      properties:
+        type:
+          type: string
+          description: Request type (e.g., "message", "thread.create")
+        thread_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Conversation/thread identifier
+        message:
+          type: object
+          properties:
+            role:
+              type: string
+              enum: [user]
+            content:
+              type: string
+              minLength: 1
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Additional context (user_id, etc.)
+      required:
+        - type
+
+    ChatKitResponse:
+      type: object
+      description: ChatKit SDK response format (non-streaming)
+      properties:
+        thread_id:
+          type: string
+          format: uuid
+          description: Conversation identifier
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChatKitMessage'
+
+    ChatKitMessage:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum: [user, assistant]
+        content:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    ChatKitEvent:
+      type: object
+      description: Server-Sent Event payload
+      properties:
+        event:
+          type: string
+          enum:
+            - thread.created
+            - message.created
+            - message.delta
+            - message.completed
+            - tool.started
+            - tool.completed
+            - error
+        data:
+          type: object
+          additionalProperties: true
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error type
+        message:
+          type: string
+          description: Human-readable error message
+      required:
+        - error
+        - message
+
+  securitySchemes:
+    domainKey:
+      type: apiKey
+      in: header
+      name: X-Domain-Key
+      description: Domain key for ChatKit authentication
+
+security:
+  - domainKey: []
+
+tags:
+  - name: ChatKit
+    description: ChatKit Python SDK endpoints

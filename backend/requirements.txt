@@ -1,0 +1,27 @@
+# Todo AI Chatbot - Backend Dependencies
+# Python 3.11+ required
+
+# Web Framework
+fastapi>=0.109.0
+
+# ORM with Pydantic integration
+sqlmodel>=0.0.14
+
+# PostgreSQL driver (async support for Neon)
+psycopg[binary]>=3.1.0
+
+# Environment variable management
+python-dotenv>=1.0.0
+
+# ASGI server
+uvicorn[standard]>=0.27.0
+
+# Multipart form data parsing (for voice endpoint)
+python-multipart>=0.0.6
+
+# OpenAI SDK (for STT/TTS)
+openai>=1.0.0
+
+# Testing
+pytest>=8.0.0
+httpx>=0.26.0

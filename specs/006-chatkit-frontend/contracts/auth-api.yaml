@@ -1,0 +1,101 @@
+# Authentication API Contract
+
+## Overview
+OpenAPI specification for authentication endpoints required for the Todo AI Chatbot application.
+
+## Authentication Endpoints
+
+### POST /api/auth/signup
+Register a new user account.
+
+**Request**:
+```json
+{
+  "email": "user@example.com",
+  "password": "securePassword123",
+  "name": "John Doe"
+}
+```
+
+**Responses**:
+- `201 Created`: User successfully created
+- `400 Bad Request`: Invalid input data
+- `409 Conflict`: Email already exists
+
+### POST /api/auth/login
+Authenticate an existing user.
+
+**Request**:
+```json
+{
+  "email": "user@example.com",
+  "password": "securePassword123"
+}
+```
+
+**Responses**:
+- `200 OK`: Successful authentication
+- `400 Bad Request`: Invalid input
+- `401 Unauthorized`: Invalid credentials
+
+### POST /api/auth/logout
+End the current user session.
+
+**Responses**:
+- `200 OK`: Successfully logged out
+
+### GET /api/auth/me
+Get current user profile information.
+
+**Headers**:
+- `Authorization: Bearer {token}`
+
+**Responses**:
+- `200 OK`: User profile data
+- `401 Unauthorized`: Invalid or expired session
+
+## Updated Existing Endpoints
+
+### GET /api/{user_id}/tasks (now secured)
+Get all tasks for the authenticated user.
+
+**Headers**:
+- `Authorization: Bearer {token}`
+
+**Path Parameters**:
+- `user_id`: User's ID (now validated against authenticated user)
+
+**Responses**:
+- `200 OK`: List of user's tasks
+- `401 Unauthorized`: Invalid or expired session
+- `403 Forbidden`: User trying to access another user's tasks
+
+### POST /api/{user_id}/chat (now secured)
+Send a message to the AI chatbot.
+
+**Headers**:
+- `Authorization: Bearer {token}`
+
+**Path Parameters**:
+- `user_id`: User's ID (now validated against authenticated user)
+
+**Request Body**:
+```json
+{
+  "type": "message",
+  "thread_id": "conversation-id-or-null",
+  "message": {
+    "role": "user",
+    "content": "Hello, how can I manage my tasks?"
+  },
+  "metadata": {}
+}
+```
+
+**Responses**:
+- `200 OK`: Chat response stream
+- `401 Unauthorized`: Invalid or expired session
+- `403 Forbidden`: User trying to access another user's conversation
+
+## Security Scheme
+All authentication-protected endpoints require a valid Bearer token in the Authorization header, which is issued by the Better Auth system upon successful login.

@@ -1,55 +1,145 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+================================================================================
+SYNC IMPACT REPORT
+================================================================================
+Version change: 0.0.0 → 1.0.0 (MAJOR: Initial constitution ratification)
+
+Modified principles: N/A (initial version)
+
+Added sections:
+- Core Principles (6 principles)
+- Technology Stack
+- Development Workflow
+- Governance
+
+Removed sections: N/A (initial version)
+
+Templates requiring updates:
+- .specify/templates/plan-template.md: ✅ Compatible (Constitution Check section exists)
+- .specify/templates/spec-template.md: ✅ Compatible (Requirements section supports MCP constraints)
+- .specify/templates/tasks-template.md: ✅ Compatible (Phase structure supports MCP tool tasks)
+
+Follow-up TODOs: None
+================================================================================
+-->
+
+# Todo AI Chatbot Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. MCP-Compliant Architecture
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+All task operations MUST be executed through MCP (Model Context Protocol) tools.
+The system MUST maintain a clear separation between AI logic, tools, and APIs.
+Tools MUST validate input and persist state to the database.
+Tools MUST return deterministic, typed outputs.
+No in-memory or internal tool state is allowed.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+**Rationale**: MCP compliance ensures reproducibility, auditability, and clean boundaries
+between components. Stateless tools enable horizontal scaling and simplify debugging.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+### II. Database as Single Source of Truth
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+All application state MUST be persisted to the database (Neon Serverless PostgreSQL).
+Conversation state MUST be stored in the database, not in memory.
+Agents and tools MUST NOT maintain internal state between invocations.
+All data access MUST go through SQLModel ORM.
 
-### [PRINCIPLE_6_NAME]
+**Rationale**: A single source of truth eliminates state synchronization issues,
+enables stateless deployment, and provides clear audit trails for all operations.
 
+### III. Stateless Agent Design
 
-[PRINCIPLE__DESCRIPTION]
+AI agents MUST be stateless between requests.
+The chat endpoint MUST be stateless with conversation state persisted to DB.
+Agents MUST NOT access the database directly; all data operations MUST use MCP tools.
+Each request MUST be self-contained with all required context.
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+**Rationale**: Stateless agents enable horizontal scaling, simplify testing,
+and ensure reproducible behavior across invocations.
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+### IV. Tool-Driven Operations
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+All task operations MUST use MCP tools exclusively.
+The AI layer MUST translate user intent into MCP tool calls.
+The `add_task` tool MUST accept: user_id (string, required), title (string, required),
+description (string, optional) and return: task_id, status, title.
+Tools MUST validate all input before executing operations.
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+**Rationale**: Tool-driven architecture creates explicit, testable contracts
+between components and ensures all operations are auditable.
+
+### V. AI Behavior Constraints
+
+The AI MUST translate user intent into appropriate MCP tool calls.
+The AI MUST ask clarifying questions when intent is ambiguous.
+The AI MUST confirm tool execution before responding to the user.
+The AI MUST NOT access the database directly.
+The AI MUST NOT include sensitive data in responses.
+
+**Rationale**: Clear AI behavior constraints ensure predictable interactions,
+protect user data, and maintain system integrity.
+
+### VI. Security and Authentication
+
+Authentication MUST be required for all operations (via Better Auth).
+User context MUST be provided for all task actions.
+No sensitive data MUST appear in AI responses.
+All API endpoints MUST validate authentication before processing.
+
+**Rationale**: Security is non-negotiable. Authentication ensures user isolation
+and protects against unauthorized access to task data.
+
+## Technology Stack
+
+**Frontend**: OpenAI ChatKit
+**Backend**: FastAPI (Python)
+**AI Framework**: OpenAI Agents SDK
+**MCP Server**: Official MCP SDK
+**ORM**: SQLModel
+**Database**: Neon Serverless PostgreSQL
+**Auth**: Better Auth
+
+All technology choices are mandatory. Deviations require explicit justification
+and constitution amendment.
+
+## Development Workflow
+
+### Conversational Task Management
+
+Users interact with the system through natural language chat.
+The AI interprets user intent and executes appropriate MCP tool calls.
+All task CRUD operations flow through the MCP server.
+The system confirms successful operations before responding.
+
+### Testing Requirements
+
+All MCP tools MUST have contract tests verifying input/output types.
+Integration tests MUST verify end-to-end chat-to-database flows.
+All tools MUST be tested for deterministic, reproducible outputs.
+
+### Deployment Requirements
+
+The system MUST be stateless and reproducible.
+All state MUST be externalized to the database.
+The chat endpoint MUST handle concurrent requests without state conflicts.
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+This constitution supersedes all other development practices and guidelines.
+All code changes MUST verify compliance with these principles.
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+**Amendment Process**:
+1. Document proposed changes with rationale
+2. Assess impact on existing system components
+3. Update all dependent templates and documentation
+4. Increment version according to semantic versioning:
+   - MAJOR: Breaking changes to principles or architecture
+   - MINOR: New principles or expanded guidance
+   - PATCH: Clarifications or typo fixes
+
+**Compliance Review**:
+All pull requests MUST include a constitution compliance check.
+Violations MUST be justified with explicit tradeoff documentation.
+
+**Version**: 1.0.0 | **Ratified**: 2026-01-19 | **Last Amended**: 2026-01-19
