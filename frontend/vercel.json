@@ -1,5 +1,19 @@
 {
   "git": {
     "submodules": false
-  }
+  },
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://umar-30-ai-todo.hf.space/api/:path*"
+    },
+    {
+      "source": "/chatkit/:path*",
+      "destination": "https://umar-30-ai-todo.hf.space/chatkit/:path*"
+    },
+    {
+      "source": "/health",
+      "destination": "https://umar-30-ai-todo.hf.space/health"
+    }
+  ]
 }
