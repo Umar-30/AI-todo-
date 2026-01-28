@@ -12,6 +12,10 @@
       "destination": "https://umar-30-ai-todo.hf.space/auth/:path*"
     },
     {
+      "source": "/chatkit",
+      "destination": "https://umar-30-ai-todo.hf.space/chatkit"
+    },
+    {
       "source": "/chatkit/:path*",
       "destination": "https://umar-30-ai-todo.hf.space/chatkit/:path*"
     },
