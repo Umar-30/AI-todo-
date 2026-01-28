@@ -71,7 +71,7 @@ class Settings:
         # Load .env file for local development
         _load_dotenv()
 
-        database_url = os.getenv("DATABASE_URL")
+        database_url = os.getenv("DATABASE_URL", "").strip()
         # Support both OPENROUTE_API_KEY and OPENROUTER_API_KEY
         openrouter_api_key = os.getenv("OPENROUTE_API_KEY") or os.getenv("OPENROUTER_API_KEY")
         openrouter_base_url = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
