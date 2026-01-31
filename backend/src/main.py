@@ -27,6 +27,17 @@ from .api.tasks import router as tasks_router
 from .api.auth import router as auth_router
 from .chatkit import create_chatkit_endpoint
 
+from fastapi import FastAPI
+
+app = FastAPI()
+
+@app.get("/")
+def root():
+    return {"message": "Todo AI Chatbot API is running"}
+
+# baqi existing code neeche rehne dein
+
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
