@@ -38,7 +38,7 @@ TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "user_id": {"type": "string", "description": "The user's unique identifier"}
+                    "user_id": {"type": "string", "description": "The user unique identifier"}
                 },
                 "required": ["user_id"]
             }
@@ -85,7 +85,7 @@ TOOLS = [
                 "type": "object",
                 "properties": {
                     "user_id": {"type": "string", "description": "The user unique identifier"},
-                    "task_id": {"type": "string", "description": "The task's unique identifier (UUID)"}
+                    "task_id": {"type": "string", "description": "The task unique identifier (UUID)"}
                 },
                 "required": ["user_id", "task_id"]
             }
