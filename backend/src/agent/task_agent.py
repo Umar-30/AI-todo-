@@ -1,7 +1,8 @@
 """
-Task Agent implementation using OpenAI API directly with OpenRouter.
+Task Agent implementation using OpenAI API directly.
 
 Provides an AI agent that maps natural language to MCP tools for task management.
+Uses OpenAI's gpt-4o-mini for reliable function calling/tool use support.
 """
 import json
 from typing import Any
@@ -121,7 +122,7 @@ def execute_tool(name: str, arguments: dict) -> Any:
 class TaskAgent:
     """
     AI agent for task management via natural language.
-    Uses OpenAI-compatible API (OpenRouter) with function calling.
+    Uses OpenAI API directly for reliable tool/function calling support.
     """
 
     def __init__(self, model: str | None = None):
@@ -129,16 +130,18 @@ class TaskAgent:
         Initialize the TaskAgent.
 
         Args:
-            model: Model to use (default: from config)
+            model: Model to use (default: gpt-4o-mini)
         """
         from ..config import get_settings
         settings = get_settings()
 
+        # Use OpenAI directly for reliable tool use support
         self.client = AsyncOpenAI(
-            api_key=settings.openrouter_api_key,
-            base_url=settings.openrouter_base_url,
+            api_key=settings.openai_api_key,
+            base_url=settings.openai_base_url,
         )
-        self.model = model or settings.openrouter_model
+        # Use gpt-4o-mini for fast, reliable tool calling
+        self.model = model or "gpt-4o-mini"
 
     async def run(
         self,
