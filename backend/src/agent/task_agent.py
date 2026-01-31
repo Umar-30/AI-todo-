@@ -22,7 +22,7 @@ TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "user_id": {"type": "string", "description": "The user's unique identifier"},
+                    "user_id": {"type": "string", "description": "The user unique identifier"},
                     "title": {"type": "string", "description": "The task title"},
                     "description": {"type": "string", "description": "Optional task description"}
                 },
@@ -52,8 +52,8 @@ TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "user_id": {"type": "string", "description": "The user's unique identifier"},
-                    "task_id": {"type": "string", "description": "The task's UUID (e.g., 'd18627f4-73ff-4450-943e-451c24962de0'). NOT the task title!"}
+                    "user_id": {"type": "string", "description": "The user unique identifier"},
+                    "task_id": {"type": "string", "description": "The task UUID. NOT the task title!"}
                 },
                 "required": ["user_id", "task_id"]
             }
@@ -63,12 +63,12 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "update_task",
-            "description": "Update a task's title or description",
+            "description": "Update a task title or description",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "user_id": {"type": "string", "description": "The user's unique identifier"},
-                    "task_id": {"type": "string", "description": "The task's unique identifier (UUID)"},
+                    "user_id": {"type": "string", "description": "The user unique identifier"},
+                    "task_id": {"type": "string", "description": "The task unique identifier (UUID)"},
                     "title": {"type": "string", "description": "New task title"},
                     "description": {"type": "string", "description": "New task description"}
                 },
@@ -84,7 +84,7 @@ TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "user_id": {"type": "string", "description": "The user's unique identifier"},
+                    "user_id": {"type": "string", "description": "The user unique identifier"},
                     "task_id": {"type": "string", "description": "The task's unique identifier (UUID)"}
                 },
                 "required": ["user_id", "task_id"]
@@ -150,10 +150,10 @@ class TaskAgent:
         context: dict[str, Any] | None = None
     ) -> dict[str, Any]:
         """
-        Process a user message and return the agent's response.
+        Process a user message and return the agent response.
 
         Args:
-            message: User's natural language message
+            message: User natural language message
             user_id: User identifier for tool calls
             context: Optional additional context
 
