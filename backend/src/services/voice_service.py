@@ -48,21 +48,17 @@ class VoiceService:
         """Initialize VoiceService with OpenAI client."""
         settings = get_settings()
 
-        # Use OpenAI API directly for audio (OpenRouter may not support audio APIs)
-        # Check for dedicated OpenAI key, fallback to OpenRouter key
-        import os
-        openai_api_key = os.getenv("OPENAI_API_KEY") or settings.openrouter_api_key
-        openai_base_url = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
-
+        # Use OpenAI API directly for audio (OpenRouter doesn't support audio APIs)
         self.client = AsyncOpenAI(
-            api_key=openai_api_key,
-            base_url=openai_base_url,
+            api_key=settings.openai_api_key,
+            base_url=settings.openai_base_url,
         )
 
-        # TTS voice options: alloy, echo, fable, onyx, nova, shimmer
-        self.default_voice = "alloy"
-        self.tts_model = "tts-1"
-        self.stt_model = "whisper-1"
+        # Voice settings from config
+        # TTS voice options: alloy, echo, fable, onyx, nova, shimmer, coral
+        self.default_voice = settings.tts_voice
+        self.tts_model = settings.tts_model
+        self.stt_model = settings.whisper_model
 
     async def transcribe(
         self,
