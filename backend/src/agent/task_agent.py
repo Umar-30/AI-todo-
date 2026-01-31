@@ -2,7 +2,7 @@
 Task Agent implementation using OpenAI API directly.
 
 Provides an AI agent that maps natural language to MCP tools for task management.
-Uses OpenAI's gpt-4o-mini for reliable function calling/tool use support.
+Uses OpenAI gpt-4o-mini for reliable function calling and tool use support.
 """
 import json
 from typing import Any
