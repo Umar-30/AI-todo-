@@ -27,16 +27,6 @@ from .api.tasks import router as tasks_router
 from .api.auth import router as auth_router
 from .chatkit import create_chatkit_endpoint
 
-from fastapi import FastAPI
-
-app = FastAPI()
-
-@app.get("/")
-def root():
-    return {"message": "Todo AI Chatbot API is running"}
-
-# baqi existing code neeche rehne dein
-
 
 # Configure logging
 logging.basicConfig(
@@ -151,6 +141,12 @@ app.include_router(voice_router)
 app.include_router(tasks_router)
 app.include_router(auth_router)  # Authentication endpoints
 app.include_router(create_chatkit_endpoint())
+
+
+@app.get("/", tags=["System"])
+async def root():
+    """Root endpoint for health check and HuggingFace Spaces."""
+    return {"status": "ok", "message": "Todo AI Chatbot API is running"}
 
 
 @app.get(
