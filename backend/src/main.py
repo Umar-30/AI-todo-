@@ -146,6 +146,42 @@ async def root():
     return {"status": "ok", "message": "Todo AI Chatbot API is running"}
 
 
+@app.get("/debug/openai", tags=["Debug"])
+async def debug_openai():
+    """Debug endpoint to test OpenAI API connection."""
+    import os
+    from openai import AsyncOpenAI
+
+    try:
+        # Check if API key exists
+        api_key = os.getenv("OPENAI_API_KEY", "")
+        if not api_key:
+            return {"error": "OPENAI_API_KEY not set", "status": "missing_key"}
+
+        key_preview = f"{api_key[:8]}...{api_key[-4:]}" if len(api_key) > 12 else "too_short"
+
+        # Try to create client and list models
+        client = AsyncOpenAI(api_key=api_key)
+
+        # Simple test - list models
+        models = await client.models.list()
+        model_ids = [m.id for m in models.data[:5]]
+
+        return {
+            "status": "ok",
+            "key_preview": key_preview,
+            "models_sample": model_ids,
+            "message": "OpenAI API connection successful"
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "error_type": type(e).__name__,
+            "error_message": str(e),
+            "key_preview": f"{api_key[:8]}..." if api_key else "not_set"
+        }
+
+
 @app.get(
     "/health",
     response_model=HealthStatus,
