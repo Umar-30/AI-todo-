@@ -1,18 +1,18 @@
 """
-Task Agent implementation using OpenAI API directly.
+Task Agent implementation using Cohere API.
 
 Provides an AI agent that maps natural language to MCP tools for task management.
-Uses OpenAI gpt-4o-mini for reliable function calling and tool use support.
+Uses Cohere command-a-03-2025 model for reliable function calling and tool use support.
 """
 import json
 from typing import Any
 
-from openai import AsyncOpenAI
+import cohere
 
 from .prompts import SYSTEM_PROMPT
 from ..mcp import tools as mcp_tools
 
-# Tool definitions for OpenAI function calling
+# Tool definitions for Cohere function calling
 TOOLS = [
     {
         "type": "function",
@@ -122,7 +122,7 @@ def execute_tool(name: str, arguments: dict) -> Any:
 class TaskAgent:
     """
     AI agent for task management via natural language.
-    Uses OpenAI API directly for reliable tool/function calling support.
+    Uses Cohere API for reliable tool/function calling support.
     """
 
     def __init__(self, model: str | None = None):
@@ -130,18 +130,17 @@ class TaskAgent:
         Initialize the TaskAgent.
 
         Args:
-            model: Model to use (default: gpt-4o-mini)
+            model: Model to use (default: command-a-03-2025)
         """
         from ..config import get_settings
         settings = get_settings()
 
-        # Use OpenAI directly for reliable tool use support
-        self.client = AsyncOpenAI(
-            api_key=settings.openai_api_key,
-            base_url=settings.openai_base_url,
+        # Use Cohere for reliable tool use support
+        self.client = cohere.AsyncClientV2(
+            api_key=settings.cohere_api_key,
         )
-        # Use gpt-4o-mini for fast, reliable tool calling
-        self.model = model or "gpt-4o-mini"
+        # Use command-a-03-2025 for fast, reliable tool calling
+        self.model = model or settings.cohere_model
 
     async def run(
         self,
@@ -179,22 +178,32 @@ class TaskAgent:
         tool_calls_made = []
 
         # Call the model
-        response = await self.client.chat.completions.create(
+        response = await self.client.chat(
             model=self.model,
             messages=messages,
             tools=TOOLS,
-            tool_choice="auto",
         )
 
-        assistant_message = response.choices[0].message
-
         # Handle tool calls if any
-        while assistant_message.tool_calls:
+        while response.message.tool_calls:
             # Add assistant message with tool calls
-            messages.append(assistant_message)
+            messages.append({
+                "role": "assistant",
+                "tool_calls": [
+                    {
+                        "id": tc.id,
+                        "type": "function",
+                        "function": {
+                            "name": tc.function.name,
+                            "arguments": tc.function.arguments
+                        }
+                    }
+                    for tc in response.message.tool_calls
+                ]
+            })
 
             # Execute each tool call
-            for tool_call in assistant_message.tool_calls:
+            for tool_call in response.message.tool_calls:
                 function_name = tool_call.function.name
                 arguments = json.loads(tool_call.function.arguments)
 
@@ -219,16 +228,18 @@ class TaskAgent:
                 })
 
             # Get next response
-            response = await self.client.chat.completions.create(
+            response = await self.client.chat(
                 model=self.model,
                 messages=messages,
                 tools=TOOLS,
-                tool_choice="auto",
             )
-            assistant_message = response.choices[0].message
 
         # Get final text response
-        response_text = assistant_message.content or ""
+        response_text = ""
+        if response.message.content:
+            for block in response.message.content:
+                if hasattr(block, "text"):
+                    response_text += block.text
 
         return {
             "response": response_text,

@@ -146,9 +146,56 @@ async def root():
     return {"status": "ok", "message": "Todo AI Chatbot API is running"}
 
 
+@app.get("/debug/cohere", tags=["Debug"])
+async def debug_cohere():
+    """Debug endpoint to test Cohere API connection."""
+    import os
+    import cohere
+
+    try:
+        # Check if API key exists
+        api_key = os.getenv("COHERE_API_KEY", "")
+        if not api_key:
+            return {"error": "COHERE_API_KEY not set", "status": "missing_key"}
+
+        key_preview = f"{api_key[:8]}...{api_key[-4:]}" if len(api_key) > 12 else "too_short"
+        model = os.getenv("COHERE_MODEL", "command-a-03-2025")
+
+        # Try to create client and make a simple request
+        client = cohere.AsyncClientV2(api_key=api_key)
+
+        # Simple test - send a basic message
+        response = await client.chat(
+            model=model,
+            messages=[{"role": "user", "content": "Hello, respond with just 'OK'"}],
+        )
+
+        response_text = ""
+        if response.message.content:
+            for block in response.message.content:
+                if hasattr(block, "text"):
+                    response_text = block.text
+                    break
+
+        return {
+            "status": "ok",
+            "key_preview": key_preview,
+            "model": model,
+            "test_response": response_text,
+            "message": "Cohere API connection successful"
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "error_type": type(e).__name__,
+            "error_message": str(e),
+            "key_preview": f"{api_key[:8]}..." if api_key else "not_set"
+        }
+
+
 @app.get("/debug/openai", tags=["Debug"])
 async def debug_openai():
-    """Debug endpoint to test OpenAI API connection."""
+    """Debug endpoint to test OpenAI API connection (used for Voice STT/TTS)."""
     import os
     from openai import AsyncOpenAI
 
@@ -171,7 +218,7 @@ async def debug_openai():
             "status": "ok",
             "key_preview": key_preview,
             "models_sample": model_ids,
-            "message": "OpenAI API connection successful"
+            "message": "OpenAI API connection successful (used for Voice STT/TTS)"
         }
     except Exception as e:
         return {

@@ -54,7 +54,10 @@ class Settings:
     """Application settings loaded from environment variables."""
     # Database
     database_url: str
-    # OpenAI (Primary - used for Task Agent + Voice)
+    # Cohere (Primary - used for Task Agent)
+    cohere_api_key: str
+    cohere_model: str
+    # OpenAI (Used for Voice: STT/TTS only)
     openai_api_key: str
     openai_base_url: str
     whisper_model: str
@@ -81,7 +84,11 @@ class Settings:
 
         database_url = os.getenv("DATABASE_URL", "").strip()
 
-        # OpenAI settings (Primary - Task Agent + Voice)
+        # Cohere settings (Primary - Task Agent)
+        cohere_api_key = os.getenv("COHERE_API_KEY", "")
+        cohere_model = os.getenv("COHERE_MODEL", "command-a-03-2025")
+
+        # OpenAI settings (Voice: STT/TTS only)
         openai_api_key = os.getenv("OPENAI_API_KEY", "")
         openai_base_url = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
         whisper_model = os.getenv("WHISPER_MODEL", "whisper-1")
@@ -108,14 +115,25 @@ class Settings:
         _validate_database_url(database_url)
 
         # Clean up API keys (remove quotes if present)
+        cohere_api_key = cohere_api_key.strip('"').strip("'")
         openai_api_key = openai_api_key.strip('"').strip("'")
         if openrouter_api_key:
             openrouter_api_key = openrouter_api_key.strip('"').strip("'")
 
-        # Validate OpenAI API Key (required for Task Agent + Voice)
+        # Validate Cohere API Key (required for Task Agent)
+        if not cohere_api_key:
+            raise ConfigurationError(
+                "COHERE_API_KEY environment variable is required.\n\n"
+                "Troubleshooting:\n"
+                "1. Add your Cohere API key to environment/secrets\n"
+                "2. Restart the application\n\n"
+                "Get your API key from: https://dashboard.cohere.com/api-keys"
+            )
+
+        # Validate OpenAI API Key (required for Voice: STT/TTS)
         if not openai_api_key:
             raise ConfigurationError(
-                "OPENAI_API_KEY environment variable is required.\n\n"
+                "OPENAI_API_KEY environment variable is required for voice features.\n\n"
                 "Troubleshooting:\n"
                 "1. Add your OpenAI API key to HuggingFace Space secrets\n"
                 "2. Restart the application\n\n"
@@ -125,11 +143,15 @@ class Settings:
         # Log configuration loaded (without sensitive values)
         logger.info("Configuration loaded successfully")
         logger.debug(f"DATABASE_URL: {database_url[:20]}...***")
+        logger.debug(f"COHERE_API_KEY: {cohere_api_key[:10]}...***")
+        logger.debug(f"COHERE_MODEL: {cohere_model}")
         logger.debug(f"OPENAI_API_KEY: {openai_api_key[:10]}...***")
         logger.debug(f"TTS_VOICE: {tts_voice}")
 
         return cls(
             database_url=database_url,
+            cohere_api_key=cohere_api_key,
+            cohere_model=cohere_model,
             openai_api_key=openai_api_key,
             openai_base_url=openai_base_url,
             whisper_model=whisper_model,
