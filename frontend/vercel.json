@@ -22,6 +22,10 @@
     {
       "source": "/health",
       "destination": "https://umar-30-ai-todo.hf.space/health"
+    },
+    {
+      "source": "/((?!api|auth|chatkit|health|assets|favicon).*)",
+      "destination": "/index.html"
     }
   ]
 }

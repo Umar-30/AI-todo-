@@ -1,17 +1,18 @@
 """
-Task Agent implementation using OpenAI API directly with OpenRouter.
+Task Agent implementation using Cohere API.
 
 Provides an AI agent that maps natural language to MCP tools for task management.
+Uses Cohere command-a-03-2025 model for reliable function calling and tool use support.
 """
 import json
 from typing import Any
 
-from openai import AsyncOpenAI
+import cohere
 
 from .prompts import SYSTEM_PROMPT
 from ..mcp import tools as mcp_tools
 
-# Tool definitions for OpenAI function calling
+# Tool definitions for Cohere function calling
 TOOLS = [
     {
         "type": "function",
@@ -21,7 +22,7 @@ TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "user_id": {"type": "string", "description": "The user's unique identifier"},
+                    "user_id": {"type": "string", "description": "The user unique identifier"},
                     "title": {"type": "string", "description": "The task title"},
                     "description": {"type": "string", "description": "Optional task description"}
                 },
@@ -37,7 +38,7 @@ TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "user_id": {"type": "string", "description": "The user's unique identifier"}
+                    "user_id": {"type": "string", "description": "The user unique identifier"}
                 },
                 "required": ["user_id"]
             }
@@ -51,8 +52,8 @@ TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "user_id": {"type": "string", "description": "The user's unique identifier"},
-                    "task_id": {"type": "string", "description": "The task's UUID (e.g., 'd18627f4-73ff-4450-943e-451c24962de0'). NOT the task title!"}
+                    "user_id": {"type": "string", "description": "The user unique identifier"},
+                    "task_id": {"type": "string", "description": "The task UUID. NOT the task title!"}
                 },
                 "required": ["user_id", "task_id"]
             }
@@ -62,12 +63,12 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "update_task",
-            "description": "Update a task's title or description",
+            "description": "Update a task title or description",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "user_id": {"type": "string", "description": "The user's unique identifier"},
-                    "task_id": {"type": "string", "description": "The task's unique identifier (UUID)"},
+                    "user_id": {"type": "string", "description": "The user unique identifier"},
+                    "task_id": {"type": "string", "description": "The task unique identifier (UUID)"},
                     "title": {"type": "string", "description": "New task title"},
                     "description": {"type": "string", "description": "New task description"}
                 },
@@ -83,8 +84,8 @@ TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "user_id": {"type": "string", "description": "The user's unique identifier"},
-                    "task_id": {"type": "string", "description": "The task's unique identifier (UUID)"}
+                    "user_id": {"type": "string", "description": "The user unique identifier"},
+                    "task_id": {"type": "string", "description": "The task unique identifier (UUID)"}
                 },
                 "required": ["user_id", "task_id"]
             }
@@ -121,7 +122,7 @@ def execute_tool(name: str, arguments: dict) -> Any:
 class TaskAgent:
     """
     AI agent for task management via natural language.
-    Uses OpenAI-compatible API (OpenRouter) with function calling.
+    Uses Cohere API for reliable tool/function calling support.
     """
 
     def __init__(self, model: str | None = None):
@@ -129,16 +130,17 @@ class TaskAgent:
         Initialize the TaskAgent.
 
         Args:
-            model: Model to use (default: from config)
+            model: Model to use (default: command-a-03-2025)
         """
         from ..config import get_settings
         settings = get_settings()
 
-        self.client = AsyncOpenAI(
-            api_key=settings.openrouter_api_key,
-            base_url=settings.openrouter_base_url,
+        # Use Cohere for reliable tool use support
+        self.client = cohere.AsyncClientV2(
+            api_key=settings.cohere_api_key,
         )
-        self.model = model or settings.openrouter_model
+        # Use command-a-03-2025 for fast, reliable tool calling
+        self.model = model or settings.cohere_model
 
     async def run(
         self,
@@ -147,10 +149,10 @@ class TaskAgent:
         context: dict[str, Any] | None = None
     ) -> dict[str, Any]:
         """
-        Process a user message and return the agent's response.
+        Process a user message and return the agent response.
 
         Args:
-            message: User's natural language message
+            message: User natural language message
             user_id: User identifier for tool calls
             context: Optional additional context
 
@@ -176,22 +178,32 @@ class TaskAgent:
         tool_calls_made = []
 
         # Call the model
-        response = await self.client.chat.completions.create(
+        response = await self.client.chat(
             model=self.model,
             messages=messages,
             tools=TOOLS,
-            tool_choice="auto",
         )
 
-        assistant_message = response.choices[0].message
-
         # Handle tool calls if any
-        while assistant_message.tool_calls:
+        while response.message.tool_calls:
             # Add assistant message with tool calls
-            messages.append(assistant_message)
+            messages.append({
+                "role": "assistant",
+                "tool_calls": [
+                    {
+                        "id": tc.id,
+                        "type": "function",
+                        "function": {
+                            "name": tc.function.name,
+                            "arguments": tc.function.arguments
+                        }
+                    }
+                    for tc in response.message.tool_calls
+                ]
+            })
 
             # Execute each tool call
-            for tool_call in assistant_message.tool_calls:
+            for tool_call in response.message.tool_calls:
                 function_name = tool_call.function.name
                 arguments = json.loads(tool_call.function.arguments)
 
@@ -216,16 +228,18 @@ class TaskAgent:
                 })
 
             # Get next response
-            response = await self.client.chat.completions.create(
+            response = await self.client.chat(
                 model=self.model,
                 messages=messages,
                 tools=TOOLS,
-                tool_choice="auto",
             )
-            assistant_message = response.choices[0].message
 
         # Get final text response
-        response_text = assistant_message.content or ""
+        response_text = ""
+        if response.message.content:
+            for block in response.message.content:
+                if hasattr(block, "text"):
+                    response_text += block.text
 
         return {
             "response": response_text,
