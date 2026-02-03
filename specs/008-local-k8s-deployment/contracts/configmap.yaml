@@ -1,0 +1,19 @@
+# ConfigMap Specification
+# This is a SPECIFICATION - actual implementation will be in k8s/manifests/
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: todo-config
+  labels:
+    app.kubernetes.io/name: todo-chatbot
+data:
+  # Backend configuration
+  api-base-url: "http://todo-backend-svc:8000"
+
+  # Frontend configuration (injected at build or runtime)
+  # Note: VITE_ prefixed vars are baked in at build time
+  # For runtime config, use nginx substitution or similar
+
+  # Application settings
+  log-level: "INFO"
+  environment: "development"

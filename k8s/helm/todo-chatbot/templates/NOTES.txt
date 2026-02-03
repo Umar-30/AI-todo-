@@ -1,0 +1,54 @@
+===============================================================================
+  Todo Chatbot has been deployed!
+===============================================================================
+
+Release: {{ .Release.Name }}
+Namespace: {{ .Release.Namespace }}
+Chart: {{ .Chart.Name }}-{{ .Chart.Version }}
+
+-------------------------------------------------------------------------------
+  ACCESSING THE APPLICATION
+-------------------------------------------------------------------------------
+
+1. Get the frontend URL:
+
+   {{- if eq .Values.frontend.nodePort 0 }}
+   # Using Minikube tunnel (recommended)
+   minikube tunnel
+   # Then access: http://localhost:{{ .Values.frontend.port }}
+   {{- else }}
+   # Using NodePort
+   minikube service todo-frontend-svc --url
+   # Or access directly: http://$(minikube ip):{{ .Values.frontend.nodePort }}
+   {{- end }}
+
+2. Verify pods are running:
+
+   kubectl get pods -l app.kubernetes.io/instance={{ .Release.Name }}
+
+3. View logs:
+
+   # Backend logs
+   kubectl logs -l app=todo-backend -f
+
+   # Frontend logs
+   kubectl logs -l app=todo-frontend -f
+
+-------------------------------------------------------------------------------
+  SCALING
+-------------------------------------------------------------------------------
+
+Scale the backend:
+   kubectl scale deployment todo-backend --replicas=3
+
+Or use Helm:
+   helm upgrade {{ .Release.Name }} {{ .Chart.Name }} --set backend.replicas=3
+
+-------------------------------------------------------------------------------
+  CLEANUP
+-------------------------------------------------------------------------------
+
+Uninstall the release:
+   helm uninstall {{ .Release.Name }}
+
+===============================================================================

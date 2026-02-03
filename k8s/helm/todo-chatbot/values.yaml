@@ -1,0 +1,67 @@
+# Default values for todo-chatbot Helm chart
+# This is a YAML-formatted file.
+
+# Backend configuration
+backend:
+  image:
+    repository: todo-backend
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 1
+  port: 8000
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  probes:
+    readiness:
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      timeoutSeconds: 3
+    liveness:
+      initialDelaySeconds: 30
+      periodSeconds: 20
+      timeoutSeconds: 3
+
+# Frontend configuration
+frontend:
+  image:
+    repository: todo-frontend
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 1
+  port: 3000
+  nodePort: 30080
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  probes:
+    readiness:
+      initialDelaySeconds: 5
+      periodSeconds: 10
+      timeoutSeconds: 3
+    liveness:
+      initialDelaySeconds: 10
+      periodSeconds: 20
+      timeoutSeconds: 3
+
+# Application configuration
+config:
+  logLevel: "INFO"
+  environment: "development"
+  apiBaseUrl: "http://todo-backend-svc:8000"
+  # Database URL - set via --set or external secret
+  databaseUrl: ""
+
+# Secrets configuration (optional - use external secrets in production)
+secrets:
+  create: false
+  databaseUrl: ""
+  openaiApiKey: ""

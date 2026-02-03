@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: todo-backend-svc
+  labels:
+    {{- include "todo-chatbot.backendLabels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "todo-chatbot.backendSelectorLabels" . | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.backend.port }}
+      targetPort: {{ .Values.backend.port }}
+      protocol: TCP

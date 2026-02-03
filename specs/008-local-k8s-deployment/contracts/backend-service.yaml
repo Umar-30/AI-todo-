@@ -1,0 +1,18 @@
+# Backend Service Specification
+# This is a SPECIFICATION - actual implementation will be in k8s/manifests/
+apiVersion: v1
+kind: Service
+metadata:
+  name: todo-backend-svc
+  labels:
+    app.kubernetes.io/name: todo-chatbot
+    app.kubernetes.io/component: backend
+spec:
+  type: ClusterIP  # Internal only - frontend accesses backend within cluster
+  selector:
+    app: todo-backend
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+      protocol: TCP

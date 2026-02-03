@@ -1,0 +1,73 @@
+# Backend Deployment Specification
+# This is a SPECIFICATION - actual implementation will be in k8s/manifests/
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: todo-backend
+  labels:
+    app.kubernetes.io/name: todo-chatbot
+    app.kubernetes.io/component: backend
+spec:
+  replicas: 1  # Configurable: 1-5
+  selector:
+    matchLabels:
+      app: todo-backend
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: todo-backend
+        app.kubernetes.io/name: todo-chatbot
+        app.kubernetes.io/component: backend
+    spec:
+      containers:
+        - name: backend
+          image: todo-backend:latest  # Configurable via values.yaml
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+              protocol: TCP
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: todo-secrets
+                  key: database-url
+                  optional: true  # Falls back to ConfigMap or --set
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: todo-secrets
+                  key: openai-api-key
+                  optional: true
+          envFrom:
+            - configMapRef:
+                name: todo-config
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+      restartPolicy: Always
