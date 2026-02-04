@@ -43,6 +43,12 @@ spec:
                   name: todo-secrets
                   key: openai-api-key
                   optional: true
+            - name: COHERE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: todo-secrets
+                  key: cohere-api-key
+                  optional: false
           envFrom:
             - configMapRef:
                 name: todo-config
