@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reminder-service
+  labels:
+    {{- include "todo-chatbot.reminderLabels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.reminder.replicas }}
+  selector:
+    matchLabels:
+      {{- include "todo-chatbot.reminderSelectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "todo-chatbot.reminderLabels" . | nindent 8 }}
+      {{- if .Values.reminder.dapr.enabled }}
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: {{ .Values.reminder.dapr.appId | quote }}
+        dapr.io/app-port: {{ .Values.reminder.port | quote }}
+        dapr.io/enable-api-logging: "true"
+      {{- end }}
+    spec:
+      containers:
+        - name: reminder
+          image: "{{ .Values.reminder.image.repository }}:{{ .Values.reminder.image.tag }}"
+          imagePullPolicy: {{ .Values.reminder.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.reminder.port }}
+              protocol: TCP
+          env:
+            - name: DAPR_HTTP_PORT
+              value: "3500"
+          resources:
+            requests:
+              cpu: {{ .Values.reminder.resources.requests.cpu }}
+              memory: {{ .Values.reminder.resources.requests.memory }}
+            limits:
+              cpu: {{ .Values.reminder.resources.limits.cpu }}
+              memory: {{ .Values.reminder.resources.limits.memory }}
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.reminder.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.reminder.port }}
+            initialDelaySeconds: 15
+            periodSeconds: 20
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: reminder-svc
+  labels:
+    {{- include "todo-chatbot.reminderLabels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "todo-chatbot.reminderSelectorLabels" . | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.reminder.port }}
+      targetPort: {{ .Values.reminder.port }}
+      protocol: TCP

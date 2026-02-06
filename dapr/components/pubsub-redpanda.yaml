@@ -1,0 +1,21 @@
+# Dapr Pub/Sub Component - Redpanda (Kafka-compatible)
+# T004: Create Dapr Pub/Sub component
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: pubsub-redpanda
+  namespace: default
+spec:
+  type: pubsub.kafka
+  version: v1
+  metadata:
+    - name: brokers
+      value: "redpanda.redpanda.svc.cluster.local:9093"
+    - name: consumerGroup
+      value: "todo-chatbot"
+    - name: authRequired
+      value: "false"
+    - name: maxMessageBytes
+      value: "1048576"
+    - name: consumeRetryInterval
+      value: "100ms"

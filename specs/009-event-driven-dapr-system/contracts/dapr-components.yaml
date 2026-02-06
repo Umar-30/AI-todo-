@@ -1,0 +1,172 @@
+# Dapr Component Configurations for Event-Driven Todo Chatbot
+# Apply to Kubernetes: kubectl apply -f dapr-components.yaml
+
+---
+# Pub/Sub Component - Redpanda (Kafka-compatible)
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: pubsub-redpanda
+  namespace: default
+spec:
+  type: pubsub.kafka
+  version: v1
+  metadata:
+    - name: brokers
+      value: "redpanda.redpanda.svc.cluster.local:9093"
+    - name: consumerGroup
+      value: "todo-chatbot"
+    - name: authRequired
+      value: "false"
+    - name: maxMessageBytes
+      value: "1048576"  # 1MB
+    - name: consumeRetryInterval
+      value: "100ms"
+
+---
+# Subscription - Task Events for Recurring Service
+apiVersion: dapr.io/v2alpha1
+kind: Subscription
+metadata:
+  name: recurring-task-events-sub
+  namespace: default
+spec:
+  pubsubname: pubsub-redpanda
+  topic: task-events
+  routes:
+    default: /events/task
+  scopes:
+    - recurring-task-service
+
+---
+# Subscription - Task Events for Reminder Service
+apiVersion: dapr.io/v2alpha1
+kind: Subscription
+metadata:
+  name: reminder-task-events-sub
+  namespace: default
+spec:
+  pubsubname: pubsub-redpanda
+  topic: task-events
+  routes:
+    default: /events/task
+  scopes:
+    - reminder-service
+
+---
+# Subscription - Task Events for Audit Service
+apiVersion: dapr.io/v2alpha1
+kind: Subscription
+metadata:
+  name: audit-task-events-sub
+  namespace: default
+spec:
+  pubsubname: pubsub-redpanda
+  topic: task-events
+  routes:
+    default: /events/task
+  scopes:
+    - audit-service
+
+---
+# Subscription - Task Updates for Audit Service
+apiVersion: dapr.io/v2alpha1
+kind: Subscription
+metadata:
+  name: audit-task-updates-sub
+  namespace: default
+spec:
+  pubsubname: pubsub-redpanda
+  topic: task-updates
+  routes:
+    default: /events/sync
+  scopes:
+    - audit-service
+
+---
+# Subscription - Task Updates for Realtime Sync Service
+apiVersion: dapr.io/v2alpha1
+kind: Subscription
+metadata:
+  name: realtime-task-updates-sub
+  namespace: default
+spec:
+  pubsubname: pubsub-redpanda
+  topic: task-updates
+  routes:
+    default: /events/sync
+  scopes:
+    - realtime-sync-service
+
+---
+# State Store Component - Redis
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: statestore-redis
+  namespace: default
+spec:
+  type: state.redis
+  version: v1
+  metadata:
+    - name: redisHost
+      value: "redis.redis.svc.cluster.local:6379"
+    - name: redisPassword
+      value: ""
+    - name: actorStateStore
+      value: "true"
+    - name: ttlInSeconds
+      value: "3600"  # 1 hour default TTL
+
+---
+# Cron Binding - Reminder Check (every minute)
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: cron-reminder
+  namespace: default
+spec:
+  type: bindings.cron
+  version: v1
+  metadata:
+    - name: schedule
+      value: "@every 1m"
+    - name: direction
+      value: "input"
+  scopes:
+    - reminder-service
+
+---
+# Secrets Store - Local File (Development)
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: secrets-local
+  namespace: default
+spec:
+  type: secretstores.local.file
+  version: v1
+  metadata:
+    - name: secretsFile
+      value: "/secrets/secrets.json"
+    - name: nestedSeparator
+      value: ":"
+
+---
+# Configuration - Tracing and Metrics
+apiVersion: dapr.io/v1alpha1
+kind: Configuration
+metadata:
+  name: todo-chatbot-config
+  namespace: default
+spec:
+  tracing:
+    samplingRate: "1"
+    zipkin:
+      endpointAddress: "http://zipkin.observability.svc.cluster.local:9411/api/v2/spans"
+  metric:
+    enabled: true
+  logging:
+    apiLogging:
+      enabled: true
+      obfuscateURLs: false

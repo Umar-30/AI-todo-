@@ -1,0 +1,8 @@
+# Reminder Service Dependencies
+# T059: Create requirements.txt with FastAPI, httpx, pydantic
+
+fastapi>=0.109.0,<1.0.0
+uvicorn>=0.27.0,<1.0.0
+httpx>=0.26.0,<1.0.0
+pydantic>=2.5.0,<3.0.0
+python-dateutil>=2.8.2,<3.0.0

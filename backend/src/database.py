@@ -193,3 +193,124 @@ def migrate_users_table() -> None:
     except Exception as e:
         logger.error(f"Failed to migrate users table: {e}")
         raise
+
+
+def migrate_tasks_phase_v() -> None:
+    """
+    Phase V migration: Add recurring tasks, tags, reminders fields to tasks table.
+    T019: Create database migration for new Task fields.
+    """
+    engine = get_engine()
+    try:
+        with engine.connect() as conn:
+            # Check and add tags column (array of strings)
+            result = conn.execute(text("""
+                SELECT column_name FROM information_schema.columns
+                WHERE table_name = 'tasks' AND column_name = 'tags'
+            """))
+            if not result.fetchone():
+                conn.execute(text("ALTER TABLE tasks ADD COLUMN tags VARCHAR(100)[]"))
+                logger.info("Added 'tags' column to tasks table")
+
+            # Check and add reminder_time column
+            result = conn.execute(text("""
+                SELECT column_name FROM information_schema.columns
+                WHERE table_name = 'tasks' AND column_name = 'reminder_time'
+            """))
+            if not result.fetchone():
+                conn.execute(text("ALTER TABLE tasks ADD COLUMN reminder_time TIMESTAMP WITH TIME ZONE"))
+                logger.info("Added 'reminder_time' column to tasks table")
+
+            # Check and add recurrence_pattern column
+            result = conn.execute(text("""
+                SELECT column_name FROM information_schema.columns
+                WHERE table_name = 'tasks' AND column_name = 'recurrence_pattern'
+            """))
+            if not result.fetchone():
+                conn.execute(text("ALTER TABLE tasks ADD COLUMN recurrence_pattern VARCHAR(20)"))
+                logger.info("Added 'recurrence_pattern' column to tasks table")
+
+            # Check and add recurrence_end_date column
+            result = conn.execute(text("""
+                SELECT column_name FROM information_schema.columns
+                WHERE table_name = 'tasks' AND column_name = 'recurrence_end_date'
+            """))
+            if not result.fetchone():
+                conn.execute(text("ALTER TABLE tasks ADD COLUMN recurrence_end_date TIMESTAMP WITH TIME ZONE"))
+                logger.info("Added 'recurrence_end_date' column to tasks table")
+
+            # Check and add parent_task_id column (for recurring task instances)
+            result = conn.execute(text("""
+                SELECT column_name FROM information_schema.columns
+                WHERE table_name = 'tasks' AND column_name = 'parent_task_id'
+            """))
+            if not result.fetchone():
+                conn.execute(text("ALTER TABLE tasks ADD COLUMN parent_task_id UUID REFERENCES tasks(id)"))
+                logger.info("Added 'parent_task_id' column to tasks table")
+
+            # T083: Optimize database queries with proper indexes
+            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_tasks_priority ON tasks(priority)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_tasks_due_date ON tasks(due_date)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_tasks_recurrence ON tasks(recurrence_pattern)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_tasks_parent ON tasks(parent_task_id)"))
+            logger.info("Created Phase V indexes on tasks table")
+
+            conn.commit()
+            logger.info("Tasks Phase V migration completed")
+    except Exception as e:
+        logger.error(f"Failed to migrate tasks table (Phase V): {e}")
+        raise
+
+
+def create_audit_records_table() -> None:
+    """
+    T020: Create audit_records table for immutable event logging.
+    """
+    engine = get_engine()
+    try:
+        with engine.connect() as conn:
+            # Check if audit_records table exists
+            result = conn.execute(text("""
+                SELECT table_name FROM information_schema.tables
+                WHERE table_name = 'audit_records'
+            """))
+            if not result.fetchone():
+                conn.execute(text("""
+                    CREATE TABLE audit_records (
+                        id UUID PRIMARY KEY,
+                        event_id UUID NOT NULL,
+                        event_type VARCHAR(50) NOT NULL,
+                        task_id UUID NOT NULL,
+                        user_id VARCHAR(255) NOT NULL,
+                        timestamp TIMESTAMP WITH TIME ZONE NOT NULL,
+                        payload JSONB NOT NULL DEFAULT '{}',
+                        correlation_id UUID,
+                        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+                    )
+                """))
+                logger.info("Created 'audit_records' table")
+
+                # Create indexes for efficient querying
+                conn.execute(text("CREATE INDEX idx_audit_task_id ON audit_records(task_id)"))
+                conn.execute(text("CREATE INDEX idx_audit_user_id ON audit_records(user_id)"))
+                conn.execute(text("CREATE INDEX idx_audit_timestamp ON audit_records(timestamp)"))
+                logger.info("Created indexes on audit_records table")
+
+            conn.commit()
+            logger.info("Audit records table creation completed")
+    except Exception as e:
+        logger.error(f"Failed to create audit_records table: {e}")
+        raise
+
+
+def run_all_migrations() -> None:
+    """
+    Run all database migrations in the correct order.
+    Safe to run multiple times - only applies missing changes.
+    """
+    logger.info("Starting database migrations...")
+    migrate_tasks_table()
+    migrate_users_table()
+    migrate_tasks_phase_v()
+    create_audit_records_table()
+    logger.info("All database migrations completed")

@@ -2,15 +2,18 @@
 Task event manager for real-time updates.
 
 Implements a simple pub/sub pattern for broadcasting task changes
-to connected SSE clients.
+to connected SSE clients, with Dapr Pub/Sub integration (Phase V).
+
+T025: Add correlation ID generation for event tracing
 """
 import asyncio
 import json
 import logging
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import AsyncGenerator, Dict, Set
+from typing import AsyncGenerator, Dict, Optional, Set
 from datetime import datetime, timezone
+from uuid import uuid4
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +27,11 @@ class TaskEventType(str, Enum):
     TASK_DELETED = "task.deleted"
 
 
+def generate_correlation_id() -> str:
+    """T025: Generate a unique correlation ID for distributed tracing."""
+    return str(uuid4())
+
+
 @dataclass
 class TaskEvent:
     """Represents a task event."""
@@ -32,6 +40,7 @@ class TaskEvent:
     task_id: str
     task_data: dict | None = None
     timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    correlation_id: Optional[str] = field(default_factory=generate_correlation_id)
 
     def to_sse(self) -> str:
         """Convert event to SSE format."""
@@ -40,8 +49,27 @@ class TaskEvent:
             "task_id": self.task_id,
             "task": self.task_data,
             "timestamp": self.timestamp,
+            "correlation_id": self.correlation_id,
         }
         return f"event: {self.event_type.value}\ndata: {json.dumps(data)}\n\n"
+
+    def to_cloudevent(self) -> dict:
+        """Convert to CloudEvents format for Dapr Pub/Sub."""
+        return {
+            "specversion": "1.0",
+            "type": self.event_type.value,
+            "source": "todo-backend",
+            "id": str(uuid4()),
+            "time": self.timestamp,
+            "datacontenttype": "application/json",
+            "subject": f"task:{self.task_id}",
+            "correlationid": self.correlation_id,
+            "data": {
+                "taskId": self.task_id,
+                "userId": self.user_id,
+                **(self.task_data or {}),
+            },
+        }
 
 
 class TaskEventManager:
@@ -141,3 +169,149 @@ class TaskEventManager:
 
 # Global event manager instance
 task_event_manager = TaskEventManager()
+
+
+# Dapr Pub/Sub integration functions (T021-T024, T026)
+async def publish_task_event_to_dapr(event: TaskEvent) -> bool:
+    """
+    Publish a task event to Dapr Pub/Sub (task-events topic).
+
+    T021-T024: Publish task lifecycle events via Dapr.
+    """
+    try:
+        from ..services.dapr_client import publish_event, TOPIC_TASK_EVENTS
+
+        cloudevent = event.to_cloudevent()
+        return await publish_event(
+            topic=TOPIC_TASK_EVENTS,
+            data=cloudevent,
+            correlation_id=event.correlation_id,
+        )
+    except ImportError:
+        logger.warning("Dapr client not available, skipping Pub/Sub publish")
+        return False
+    except Exception as e:
+        logger.error(f"Failed to publish event to Dapr: {e}")
+        return False
+
+
+async def publish_task_update_to_dapr(event: TaskEvent) -> bool:
+    """
+    Publish a task update event to Dapr Pub/Sub (task-updates topic).
+
+    T026: Dual-publish to task-updates topic for realtime sync.
+    This event contains the full task object for client sync.
+    """
+    try:
+        from ..services.dapr_client import publish_event, TOPIC_TASK_UPDATES
+        from .event_schemas import ChangeType
+
+        # Map event type to change type
+        change_type_map = {
+            TaskEventType.TASK_CREATED: ChangeType.CREATED,
+            TaskEventType.TASK_UPDATED: ChangeType.UPDATED,
+            TaskEventType.TASK_COMPLETED: ChangeType.COMPLETED,
+            TaskEventType.TASK_UNCOMPLETED: ChangeType.UPDATED,
+            TaskEventType.TASK_DELETED: ChangeType.DELETED,
+        }
+
+        change_type = change_type_map.get(event.event_type, ChangeType.UPDATED)
+
+        sync_event = {
+            "specversion": "1.0",
+            "type": "sync.task_changed",
+            "source": "todo-backend",
+            "id": str(uuid4()),
+            "time": event.timestamp,
+            "datacontenttype": "application/json",
+            "subject": f"task:{event.task_id}",
+            "correlationid": event.correlation_id,
+            "data": {
+                "taskId": event.task_id,
+                "userId": event.user_id,
+                "changeType": change_type.value,
+                "task": event.task_data,
+            },
+        }
+
+        return await publish_event(
+            topic=TOPIC_TASK_UPDATES,
+            data=sync_event,
+            correlation_id=event.correlation_id,
+        )
+    except ImportError:
+        logger.warning("Dapr client not available, skipping task-updates publish")
+        return False
+    except Exception as e:
+        logger.error(f"Failed to publish task update to Dapr: {e}")
+        return False
+
+
+def publish_task_event_sync(event: TaskEvent) -> bool:
+    """
+    Synchronous wrapper for publishing task events to Dapr.
+    Falls back gracefully if Dapr is not available.
+    """
+    try:
+        from ..services.dapr_client import publish_event_sync, TOPIC_TASK_EVENTS
+
+        cloudevent = event.to_cloudevent()
+        return publish_event_sync(
+            topic=TOPIC_TASK_EVENTS,
+            data=cloudevent,
+            correlation_id=event.correlation_id,
+        )
+    except ImportError:
+        logger.debug("Dapr client not available (sync)")
+        return False
+    except Exception as e:
+        logger.warning(f"Failed to publish event to Dapr (sync): {e}")
+        return False
+
+
+def publish_task_update_sync(event: TaskEvent) -> bool:
+    """
+    Synchronous wrapper for publishing task updates to Dapr.
+    """
+    try:
+        from ..services.dapr_client import publish_event_sync, TOPIC_TASK_UPDATES
+        from .event_schemas import ChangeType
+
+        change_type_map = {
+            TaskEventType.TASK_CREATED: ChangeType.CREATED,
+            TaskEventType.TASK_UPDATED: ChangeType.UPDATED,
+            TaskEventType.TASK_COMPLETED: ChangeType.COMPLETED,
+            TaskEventType.TASK_UNCOMPLETED: ChangeType.UPDATED,
+            TaskEventType.TASK_DELETED: ChangeType.DELETED,
+        }
+
+        change_type = change_type_map.get(event.event_type, ChangeType.UPDATED)
+
+        sync_event = {
+            "specversion": "1.0",
+            "type": "sync.task_changed",
+            "source": "todo-backend",
+            "id": str(uuid4()),
+            "time": event.timestamp,
+            "datacontenttype": "application/json",
+            "subject": f"task:{event.task_id}",
+            "correlationid": event.correlation_id,
+            "data": {
+                "taskId": event.task_id,
+                "userId": event.user_id,
+                "changeType": change_type.value,
+                "task": event.task_data,
+            },
+        }
+
+        return publish_event_sync(
+            topic=TOPIC_TASK_UPDATES,
+            data=sync_event,
+            correlation_id=event.correlation_id,
+        )
+    except ImportError:
+        logger.debug("Dapr client not available for task-updates (sync)")
+        return False
+    except Exception as e:
+        logger.warning(f"Failed to publish task update to Dapr (sync): {e}")
+        return False

@@ -1,0 +1,66 @@
+{{- if .Values.dapr.pubsub }}
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: {{ .Values.dapr.pubsub.name }}
+spec:
+  type: {{ .Values.dapr.pubsub.type }}
+  version: v1
+  metadata:
+    - name: brokers
+      value: {{ .Values.dapr.pubsub.brokers | quote }}
+    - name: consumerGroup
+      value: {{ .Values.dapr.pubsub.consumerGroup | quote }}
+    - name: maxMessageBytes
+      value: "1048576"
+    - name: consumeRetryInterval
+      value: "100ms"
+    {{- if .Values.dapr.pubsub.authRequired }}
+    - name: authRequired
+      value: "true"
+    - name: saslUsername
+      value: {{ .Values.dapr.pubsub.sasl.username | quote }}
+    - name: saslPassword
+      secretKeyRef:
+        name: redpanda-auth
+        key: SASL_PASSWORD
+    - name: saslMechanism
+      value: {{ .Values.dapr.pubsub.sasl.mechanism | quote }}
+    - name: authType
+      value: "password"
+    {{- end }}
+{{- end }}
+---
+{{- if .Values.dapr.statestore }}
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: {{ .Values.dapr.statestore.name }}
+spec:
+  type: {{ .Values.dapr.statestore.type }}
+  version: v1
+  metadata:
+    - name: redisHost
+      value: {{ .Values.dapr.statestore.host | quote }}
+    {{- if .Values.dapr.statestore.password }}
+    - name: redisPassword
+      value: {{ .Values.dapr.statestore.password | quote }}
+    {{- end }}
+    - name: actorStateStore
+      value: {{ .Values.dapr.statestore.actorStateStore | quote }}
+    - name: ttlInSeconds
+      value: "3600"
+{{- end }}
+---
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: cron-reminder
+spec:
+  type: bindings.cron
+  version: v1
+  metadata:
+    - name: schedule
+      value: "@every 1m"
+    - name: route
+      value: "/reminders/check"

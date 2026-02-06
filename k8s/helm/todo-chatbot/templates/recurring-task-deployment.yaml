@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: recurring-task-service
+  labels:
+    {{- include "todo-chatbot.recurringTaskLabels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.recurringTask.replicas }}
+  selector:
+    matchLabels:
+      {{- include "todo-chatbot.recurringTaskSelectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "todo-chatbot.recurringTaskLabels" . | nindent 8 }}
+      {{- if .Values.recurringTask.dapr.enabled }}
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: {{ .Values.recurringTask.dapr.appId | quote }}
+        dapr.io/app-port: {{ .Values.recurringTask.port | quote }}
+        dapr.io/enable-api-logging: "true"
+      {{- end }}
+    spec:
+      containers:
+        - name: recurring-task
+          image: "{{ .Values.recurringTask.image.repository }}:{{ .Values.recurringTask.image.tag }}"
+          imagePullPolicy: {{ .Values.recurringTask.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.recurringTask.port }}
+              protocol: TCP
+          env:
+            - name: DAPR_HTTP_PORT
+              value: "3500"
+          resources:
+            requests:
+              cpu: {{ .Values.recurringTask.resources.requests.cpu }}
+              memory: {{ .Values.recurringTask.resources.requests.memory }}
+            limits:
+              cpu: {{ .Values.recurringTask.resources.limits.cpu }}
+              memory: {{ .Values.recurringTask.resources.limits.memory }}
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.recurringTask.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.recurringTask.port }}
+            initialDelaySeconds: 15
+            periodSeconds: 20
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: recurring-task-svc
+  labels:
+    {{- include "todo-chatbot.recurringTaskLabels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "todo-chatbot.recurringTaskSelectorLabels" . | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.recurringTask.port }}
+      targetPort: {{ .Values.recurringTask.port }}
+      protocol: TCP

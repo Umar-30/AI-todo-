@@ -12,7 +12,7 @@ Chart: {{ .Chart.Name }}-{{ .Chart.Version }}
 
 1. Get the frontend URL:
 
-   {{- if eq .Values.frontend.nodePort 0 }}
+   {{- if eq (int .Values.frontend.nodePort) 0 }}
    # Using Minikube tunnel (recommended)
    minikube tunnel
    # Then access: http://localhost:{{ .Values.frontend.port }}

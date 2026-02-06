@@ -21,18 +21,34 @@ from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from .database import check_connection, close_engine, create_tables, get_engine, migrate_tasks_table, migrate_users_table
+from .database import check_connection, close_engine, create_tables, get_engine, migrate_tasks_table, migrate_users_table, migrate_tasks_phase_v, create_audit_records_table
 from .api import chat_router, voice_router
 from .api.tasks import router as tasks_router
 from .api.auth import router as auth_router
+from .api.audit import router as audit_router
 from .chatkit import create_chatkit_endpoint
 
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
+# Configure structured JSON logging for Kubernetes
+import json as _json
+
+class JSONFormatter(logging.Formatter):
+    """JSON log formatter for structured logging in K8s."""
+    def format(self, record):
+        log_entry = {
+            "timestamp": self.formatTime(record, self.datefmt),
+            "level": record.levelname,
+            "service": "todo-backend",
+            "logger": record.name,
+            "message": record.getMessage(),
+        }
+        if record.exc_info and record.exc_info[0]:
+            log_entry["exception"] = self.formatException(record.exc_info)
+        return _json.dumps(log_entry)
+
+_handler = logging.StreamHandler()
+_handler.setFormatter(JSONFormatter())
+logging.basicConfig(level=logging.INFO, handlers=[_handler])
 logger = logging.getLogger(__name__)
 
 
@@ -98,6 +114,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             # Run migrations to add any missing columns
             migrate_tasks_table()
             migrate_users_table()
+            migrate_tasks_phase_v()
+            create_audit_records_table()
         else:
             logger.warning("Database connection failed - server will start but /health will report unhealthy")
 
@@ -137,6 +155,7 @@ app.include_router(chat_router)
 app.include_router(voice_router)
 app.include_router(tasks_router)
 app.include_router(auth_router)  # Authentication endpoints
+app.include_router(audit_router)  # Audit trail endpoints
 app.include_router(create_chatkit_endpoint())
 
 

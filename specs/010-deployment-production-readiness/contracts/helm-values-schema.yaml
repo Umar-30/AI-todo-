@@ -1,0 +1,79 @@
+# Helm Values Schema Contract
+# Defines the expected structure for values.yaml, values-local.yaml, values-cloud.yaml
+# Services extend the existing backend/frontend with microservices
+
+# Existing (Phase IV)
+backend:
+  image: { repository: string, tag: string, pullPolicy: string }
+  replicas: integer
+  port: integer
+  resources: { requests: { cpu: string, memory: string }, limits: { cpu: string, memory: string } }
+  probes: { readiness: { initialDelaySeconds: int, periodSeconds: int, timeoutSeconds: int }, liveness: { ... } }
+
+frontend:
+  image: { repository: string, tag: string, pullPolicy: string }
+  replicas: integer
+  port: integer
+  nodePort: integer
+  resources: { ... }
+  probes: { ... }
+
+# New (Phase V - Microservices)
+recurringTask:
+  image: { repository: string, tag: string, pullPolicy: string }
+  replicas: integer
+  port: integer  # 8001
+  resources: { requests: { cpu: string, memory: string }, limits: { cpu: string, memory: string } }
+
+realtimeSync:
+  image: { repository: string, tag: string, pullPolicy: string }
+  replicas: integer
+  port: integer  # 8002
+  resources: { ... }
+
+reminder:
+  image: { repository: string, tag: string, pullPolicy: string }
+  replicas: integer
+  port: integer  # 8003
+  resources: { ... }
+
+audit:
+  image: { repository: string, tag: string, pullPolicy: string }
+  replicas: integer
+  port: integer  # 8004
+  resources: { ... }
+
+# New (Phase V - Dapr)
+dapr:
+  enabled: boolean  # true
+  pubsub:
+    name: string  # pubsub-redpanda
+    brokers: string  # varies by env
+    authRequired: boolean  # false local, true cloud
+    saslUsername: string  # cloud only
+    saslPassword: string  # cloud only
+  statestore:
+    name: string  # statestore-redis
+    redisHost: string  # varies by env
+
+# New (Phase V - Infrastructure)
+redpanda:
+  enabled: boolean  # true for local, false for cloud (uses Redpanda Cloud)
+  replicas: integer
+  port: integer
+
+redis:
+  enabled: boolean  # true
+  replicas: integer
+
+# Existing (Phase IV)
+config:
+  logLevel: string
+  environment: string  # development | production
+  apiBaseUrl: string
+
+secrets:
+  create: boolean
+  databaseUrl: string
+  jwtSecret: string
+  cohereApiKey: string

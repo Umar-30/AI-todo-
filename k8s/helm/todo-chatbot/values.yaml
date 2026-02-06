@@ -9,6 +9,9 @@ backend:
     pullPolicy: IfNotPresent
   replicas: 1
   port: 8000
+  dapr:
+    enabled: true
+    appId: todo-backend
   resources:
     requests:
       cpu: 100m
@@ -52,6 +55,113 @@ frontend:
       periodSeconds: 20
       timeoutSeconds: 3
 
+# Microservice: Recurring Task Service
+recurringTask:
+  image:
+    repository: recurring-task-service
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 1
+  port: 8001
+  dapr:
+    enabled: true
+    appId: recurring-task-service
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+# Microservice: Realtime Sync Service
+realtimeSync:
+  image:
+    repository: realtime-sync-service
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 1
+  port: 8002
+  dapr:
+    enabled: true
+    appId: realtime-sync-service
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+# Microservice: Reminder Service
+reminder:
+  image:
+    repository: reminder-service
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 1
+  port: 8003
+  dapr:
+    enabled: true
+    appId: reminder-service
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+# Microservice: Audit Service
+audit:
+  image:
+    repository: audit-service
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 1
+  port: 8004
+  dapr:
+    enabled: true
+    appId: audit-service
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+# Dapr configuration
+dapr:
+  pubsub:
+    name: pubsub-redpanda
+    type: pubsub.kafka
+    brokers: "redpanda.redpanda.svc.cluster.local:9093"
+    consumerGroup: "todo-chatbot"
+    authRequired: false
+    sasl:
+      username: ""
+      password: ""
+      mechanism: ""
+  statestore:
+    name: statestore-redis
+    type: state.redis
+    host: "redis.redis.svc.cluster.local:6379"
+    password: ""
+    actorStateStore: true
+
+# Infrastructure (local only - disabled for cloud)
+infrastructure:
+  redis:
+    enabled: true
+    image: redis:7-alpine
+    port: 6379
+  redpanda:
+    enabled: true
+    image: redpandadata/redpanda:latest
+    kafkaPort: 9092
+    internalPort: 9093
+
 # Application configuration
 config:
   logLevel: "INFO"
@@ -65,3 +175,5 @@ secrets:
   create: false
   databaseUrl: ""
   openaiApiKey: ""
+  cohereApiKey: ""
+  jwtSecret: ""

@@ -18,6 +18,13 @@ spec:
     metadata:
       labels:
         {{- include "todo-chatbot.backendLabels" . | nindent 8 }}
+      {{- if .Values.backend.dapr.enabled }}
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: {{ .Values.backend.dapr.appId | quote }}
+        dapr.io/app-port: {{ .Values.backend.port | quote }}
+        dapr.io/enable-api-logging: "true"
+      {{- end }}
     spec:
       containers:
         - name: backend
@@ -27,24 +34,30 @@ spec:
             - containerPort: {{ .Values.backend.port }}
               protocol: TCP
           env:
-            {{- if .Values.config.databaseUrl }}
-            - name: DATABASE_URL
-              value: {{ .Values.config.databaseUrl | quote }}
-            {{- else if .Values.secrets.create }}
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "todo-chatbot.fullname" . }}-secrets
-                  key: database-url
-            {{- end }}
-            {{- if .Values.secrets.create }}
+                  name: todo-secrets
+                  key: DATABASE_URL
+                  optional: true
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: todo-secrets
+                  key: JWT_SECRET
+                  optional: true
+            - name: COHERE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: todo-secrets
+                  key: COHERE_API_KEY
+                  optional: true
             - name: OPENAI_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "todo-chatbot.fullname" . }}-secrets
-                  key: openai-api-key
+                  name: todo-secrets
+                  key: OPENAI_API_KEY
                   optional: true
-            {{- end }}
           envFrom:
             - configMapRef:
                 name: {{ include "todo-chatbot.fullname" . }}-config

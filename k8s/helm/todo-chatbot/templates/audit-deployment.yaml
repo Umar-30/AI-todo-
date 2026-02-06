@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: audit-service
+  labels:
+    {{- include "todo-chatbot.auditLabels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.audit.replicas }}
+  selector:
+    matchLabels:
+      {{- include "todo-chatbot.auditSelectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "todo-chatbot.auditLabels" . | nindent 8 }}
+      {{- if .Values.audit.dapr.enabled }}
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: {{ .Values.audit.dapr.appId | quote }}
+        dapr.io/app-port: {{ .Values.audit.port | quote }}
+        dapr.io/enable-api-logging: "true"
+      {{- end }}
+    spec:
+      containers:
+        - name: audit
+          image: "{{ .Values.audit.image.repository }}:{{ .Values.audit.image.tag }}"
+          imagePullPolicy: {{ .Values.audit.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.audit.port }}
+              protocol: TCP
+          env:
+            - name: DAPR_HTTP_PORT
+              value: "3500"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: todo-secrets
+                  key: DATABASE_URL
+                  optional: true
+          resources:
+            requests:
+              cpu: {{ .Values.audit.resources.requests.cpu }}
+              memory: {{ .Values.audit.resources.requests.memory }}
+            limits:
+              cpu: {{ .Values.audit.resources.limits.cpu }}
+              memory: {{ .Values.audit.resources.limits.memory }}
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.audit.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.audit.port }}
+            initialDelaySeconds: 15
+            periodSeconds: 20
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: audit-svc
+  labels:
+    {{- include "todo-chatbot.auditLabels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "todo-chatbot.auditSelectorLabels" . | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.audit.port }}
+      targetPort: {{ .Values.audit.port }}
+      protocol: TCP

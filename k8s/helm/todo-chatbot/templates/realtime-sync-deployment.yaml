@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: realtime-sync-service
+  labels:
+    {{- include "todo-chatbot.realtimeSyncLabels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.realtimeSync.replicas }}
+  selector:
+    matchLabels:
+      {{- include "todo-chatbot.realtimeSyncSelectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "todo-chatbot.realtimeSyncLabels" . | nindent 8 }}
+      {{- if .Values.realtimeSync.dapr.enabled }}
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: {{ .Values.realtimeSync.dapr.appId | quote }}
+        dapr.io/app-port: {{ .Values.realtimeSync.port | quote }}
+        dapr.io/enable-api-logging: "true"
+      {{- end }}
+    spec:
+      containers:
+        - name: realtime-sync
+          image: "{{ .Values.realtimeSync.image.repository }}:{{ .Values.realtimeSync.image.tag }}"
+          imagePullPolicy: {{ .Values.realtimeSync.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.realtimeSync.port }}
+              protocol: TCP
+          env:
+            - name: DAPR_HTTP_PORT
+              value: "3500"
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: todo-secrets
+                  key: JWT_SECRET
+                  optional: true
+          resources:
+            requests:
+              cpu: {{ .Values.realtimeSync.resources.requests.cpu }}
+              memory: {{ .Values.realtimeSync.resources.requests.memory }}
+            limits:
+              cpu: {{ .Values.realtimeSync.resources.limits.cpu }}
+              memory: {{ .Values.realtimeSync.resources.limits.memory }}
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.realtimeSync.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.realtimeSync.port }}
+            initialDelaySeconds: 15
+            periodSeconds: 20
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: realtime-sync-svc
+  labels:
+    {{- include "todo-chatbot.realtimeSyncLabels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "todo-chatbot.realtimeSyncSelectorLabels" . | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.realtimeSync.port }}
+      targetPort: {{ .Values.realtimeSync.port }}
+      protocol: TCP

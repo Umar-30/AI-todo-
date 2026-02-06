@@ -1,0 +1,77 @@
+# Local (Minikube) environment overrides
+# Usage: helm upgrade --install todo-chatbot . -f values.yaml -f values-local.yaml
+
+# All images built locally on Minikube Docker daemon
+backend:
+  image:
+    repository: todo-backend
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 1
+
+frontend:
+  image:
+    repository: todo-frontend
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 1
+
+recurringTask:
+  image:
+    repository: recurring-task-service
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 1
+
+realtimeSync:
+  image:
+    repository: realtime-sync-service
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 1
+
+reminder:
+  image:
+    repository: reminder-service
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 1
+
+audit:
+  image:
+    repository: audit-service
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 1
+
+# Dapr: local Redpanda + Redis inside cluster
+dapr:
+  pubsub:
+    name: pubsub-redpanda
+    type: pubsub.kafka
+    brokers: "redpanda.redpanda.svc.cluster.local:9093"
+    consumerGroup: "todo-chatbot"
+    authRequired: false
+  statestore:
+    name: statestore-redis
+    type: state.redis
+    host: "redis.redis.svc.cluster.local:6379"
+    password: ""
+    actorStateStore: true
+
+# Infrastructure enabled for local - deploy Redis + Redpanda in cluster
+infrastructure:
+  redis:
+    enabled: true
+    image: redis:7-alpine
+    port: 6379
+  redpanda:
+    enabled: true
+    image: redpandadata/redpanda:latest
+    kafkaPort: 9092
+    internalPort: 9093
+
+config:
+  logLevel: "DEBUG"
+  environment: "local"
+  apiBaseUrl: "http://todo-backend-svc:8000"

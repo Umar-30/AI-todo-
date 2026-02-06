@@ -1,0 +1,76 @@
+# Cloud (DOKS/Managed K8s) environment overrides
+# Usage: helm upgrade --install todo-chatbot . -f values.yaml -f values-cloud.yaml
+
+# GHCR images - update with your GitHub org/user
+backend:
+  image:
+    repository: ghcr.io/YOUR_GITHUB_ORG/todo-backend
+    tag: latest
+    pullPolicy: Always
+  replicas: 2
+
+frontend:
+  image:
+    repository: ghcr.io/YOUR_GITHUB_ORG/todo-frontend
+    tag: latest
+    pullPolicy: Always
+  replicas: 2
+
+recurringTask:
+  image:
+    repository: ghcr.io/YOUR_GITHUB_ORG/recurring-task-service
+    tag: latest
+    pullPolicy: Always
+  replicas: 2
+
+realtimeSync:
+  image:
+    repository: ghcr.io/YOUR_GITHUB_ORG/realtime-sync-service
+    tag: latest
+    pullPolicy: Always
+  replicas: 2
+
+reminder:
+  image:
+    repository: ghcr.io/YOUR_GITHUB_ORG/reminder-service
+    tag: latest
+    pullPolicy: Always
+  replicas: 2
+
+audit:
+  image:
+    repository: ghcr.io/YOUR_GITHUB_ORG/audit-service
+    tag: latest
+    pullPolicy: Always
+  replicas: 2
+
+# Dapr: Redpanda Cloud Serverless with SASL/SCRAM auth
+dapr:
+  pubsub:
+    name: pubsub-redpanda
+    type: pubsub.kafka
+    brokers: "YOUR_REDPANDA_CLOUD_BOOTSTRAP_URL:9092"
+    consumerGroup: "todo-chatbot-cloud"
+    authRequired: true
+    sasl:
+      username: "YOUR_SASL_USERNAME"
+      password: ""  # Set via K8s secret redpanda-auth
+      mechanism: "SCRAM-SHA-256"
+  statestore:
+    name: statestore-redis
+    type: state.redis
+    host: "YOUR_MANAGED_REDIS_HOST:6379"
+    password: ""  # Set via K8s secret if needed
+    actorStateStore: true
+
+# Infrastructure disabled for cloud - use managed services
+infrastructure:
+  redis:
+    enabled: false
+  redpanda:
+    enabled: false
+
+config:
+  logLevel: "INFO"
+  environment: "production"
+  apiBaseUrl: "http://todo-backend-svc:8000"

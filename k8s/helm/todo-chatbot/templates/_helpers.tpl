@@ -81,3 +81,71 @@ Frontend selector labels
 {{ include "todo-chatbot.selectorLabels" . }}
 app: todo-frontend
 {{- end }}
+
+{{/*
+Recurring Task Service labels
+*/}}
+{{- define "todo-chatbot.recurringTaskLabels" -}}
+{{ include "todo-chatbot.labels" . }}
+app.kubernetes.io/component: recurring-task
+app: recurring-task-service
+{{- end }}
+
+{{/*
+Recurring Task Service selector labels
+*/}}
+{{- define "todo-chatbot.recurringTaskSelectorLabels" -}}
+{{ include "todo-chatbot.selectorLabels" . }}
+app: recurring-task-service
+{{- end }}
+
+{{/*
+Realtime Sync Service labels
+*/}}
+{{- define "todo-chatbot.realtimeSyncLabels" -}}
+{{ include "todo-chatbot.labels" . }}
+app.kubernetes.io/component: realtime-sync
+app: realtime-sync-service
+{{- end }}
+
+{{/*
+Realtime Sync Service selector labels
+*/}}
+{{- define "todo-chatbot.realtimeSyncSelectorLabels" -}}
+{{ include "todo-chatbot.selectorLabels" . }}
+app: realtime-sync-service
+{{- end }}
+
+{{/*
+Reminder Service labels
+*/}}
+{{- define "todo-chatbot.reminderLabels" -}}
+{{ include "todo-chatbot.labels" . }}
+app.kubernetes.io/component: reminder
+app: reminder-service
+{{- end }}
+
+{{/*
+Reminder Service selector labels
+*/}}
+{{- define "todo-chatbot.reminderSelectorLabels" -}}
+{{ include "todo-chatbot.selectorLabels" . }}
+app: reminder-service
+{{- end }}
+
+{{/*
+Audit Service labels
+*/}}
+{{- define "todo-chatbot.auditLabels" -}}
+{{ include "todo-chatbot.labels" . }}
+app.kubernetes.io/component: audit
+app: audit-service
+{{- end }}
+
+{{/*
+Audit Service selector labels
+*/}}
+{{- define "todo-chatbot.auditSelectorLabels" -}}
+{{ include "todo-chatbot.selectorLabels" . }}
+app: audit-service
+{{- end }}

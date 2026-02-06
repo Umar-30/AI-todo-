@@ -1,0 +1,72 @@
+# CI/CD Workflow Contract
+# Defines the expected structure of the GitHub Actions workflow
+
+workflow:
+  name: "Build and Deploy"
+  trigger:
+    push:
+      branches: [main]
+    pull_request:
+      branches: [main]  # Build only, no deploy
+
+  secrets_required:
+    - GHCR_TOKEN  # or use GITHUB_TOKEN for GHCR
+    - KUBE_CONFIG  # base64-encoded kubeconfig for target cluster
+    - DATABASE_URL
+    - JWT_SECRET
+    - COHERE_API_KEY
+    - REDPANDA_SASL_USERNAME  # cloud only
+    - REDPANDA_SASL_PASSWORD  # cloud only
+
+  jobs:
+    detect-changes:
+      outputs:
+        backend_changed: boolean
+        frontend_changed: boolean
+        recurring_changed: boolean
+        realtime_changed: boolean
+        reminder_changed: boolean
+        audit_changed: boolean
+      method: "dorny/paths-filter or similar"
+
+    build:
+      needs: [detect-changes]
+      strategy: matrix (per changed service)
+      steps:
+        - checkout
+        - docker_build:
+            tag: "ghcr.io/{org}/{service}:{sha}"
+        - docker_tag:
+            alias: "ghcr.io/{org}/{service}:latest"
+        - docker_push:
+            registry: ghcr.io
+
+    deploy:
+      needs: [build]
+      condition: "github.event_name == 'push' && github.ref == 'refs/heads/main'"
+      steps:
+        - setup_kubeconfig:
+            from: secrets.KUBE_CONFIG
+        - create_secrets:
+            from: [DATABASE_URL, JWT_SECRET, COHERE_API_KEY]
+        - helm_upgrade:
+            chart: k8s/helm/todo-chatbot
+            values: values-cloud.yaml
+            set: "image tags from build job outputs"
+        - verify_rollout:
+            timeout: 300s
+            services: [backend, frontend, recurring-task, realtime-sync, reminder, audit]
+
+  failure_handling:
+    build_failure: "Stop pipeline, do not deploy"
+    push_failure: "Retry 1x, then fail pipeline"
+    deploy_failure: "Rollback to previous release via helm rollback"
+
+# Health Check Contract
+health_endpoints:
+  backend: { path: "/health", port: 8000, expected: 200 }
+  frontend: { path: "/", port: 3000, expected: 200 }
+  recurring_task: { path: "/health", port: 8001, expected: 200 }
+  realtime_sync: { path: "/health", port: 8002, expected: 200 }
+  reminder: { path: "/health", port: 8003, expected: 200 }
+  audit: { path: "/health", port: 8004, expected: 200 }

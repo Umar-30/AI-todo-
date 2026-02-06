@@ -1,0 +1,258 @@
+name: Build, Push & Deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  # T063: Change detection - only build what changed
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      recurring-task: ${{ steps.filter.outputs.recurring-task }}
+      realtime-sync: ${{ steps.filter.outputs.realtime-sync }}
+      reminder: ${{ steps.filter.outputs.reminder }}
+      audit: ${{ steps.filter.outputs.audit }}
+      helm: ${{ steps.filter.outputs.helm }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+            frontend:
+              - 'AI-todo-new/**'
+            recurring-task:
+              - 'services/recurring-task-service/**'
+            realtime-sync:
+              - 'services/realtime-sync-service/**'
+            reminder:
+              - 'services/reminder-service/**'
+            audit:
+              - 'services/audit-service/**'
+            helm:
+              - 'k8s/helm/**'
+
+  # T064-T067: Build and push images
+  build-backend:
+    name: Build Backend
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: ${{ github.event_name == 'push' }}
+          tags: |
+            ${{ env.IMAGE_PREFIX }}/todo-backend:${{ github.sha }}
+            ${{ env.IMAGE_PREFIX }}/todo-backend:latest
+
+  build-frontend:
+    name: Build Frontend
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: ./AI-todo-new
+          push: ${{ github.event_name == 'push' }}
+          tags: |
+            ${{ env.IMAGE_PREFIX }}/todo-frontend:${{ github.sha }}
+            ${{ env.IMAGE_PREFIX }}/todo-frontend:latest
+
+  build-recurring-task:
+    name: Build Recurring Task Service
+    needs: changes
+    if: needs.changes.outputs.recurring-task == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: ./services/recurring-task-service
+          push: ${{ github.event_name == 'push' }}
+          tags: |
+            ${{ env.IMAGE_PREFIX }}/recurring-task-service:${{ github.sha }}
+            ${{ env.IMAGE_PREFIX }}/recurring-task-service:latest
+
+  build-realtime-sync:
+    name: Build Realtime Sync Service
+    needs: changes
+    if: needs.changes.outputs.realtime-sync == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: ./services/realtime-sync-service
+          push: ${{ github.event_name == 'push' }}
+          tags: |
+            ${{ env.IMAGE_PREFIX }}/realtime-sync-service:${{ github.sha }}
+            ${{ env.IMAGE_PREFIX }}/realtime-sync-service:latest
+
+  build-reminder:
+    name: Build Reminder Service
+    needs: changes
+    if: needs.changes.outputs.reminder == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: ./services/reminder-service
+          push: ${{ github.event_name == 'push' }}
+          tags: |
+            ${{ env.IMAGE_PREFIX }}/reminder-service:${{ github.sha }}
+            ${{ env.IMAGE_PREFIX }}/reminder-service:latest
+
+  build-audit:
+    name: Build Audit Service
+    needs: changes
+    if: needs.changes.outputs.audit == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: ./services/audit-service
+          push: ${{ github.event_name == 'push' }}
+          tags: |
+            ${{ env.IMAGE_PREFIX }}/audit-service:${{ github.sha }}
+            ${{ env.IMAGE_PREFIX }}/audit-service:latest
+
+  # T069-T075: Deploy to cloud cluster
+  deploy:
+    name: Deploy to Cloud
+    needs:
+      - changes
+      - build-backend
+      - build-frontend
+      - build-recurring-task
+      - build-realtime-sync
+      - build-reminder
+      - build-audit
+    # Only deploy on push to main, not PRs
+    if: |
+      always() &&
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      !contains(needs.*.result, 'failure')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.14.0
+
+      - name: Set up kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
+
+      - name: Create/Update Kubernetes secrets
+        run: |
+          kubectl create secret generic todo-secrets \
+            --from-literal=DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+            --from-literal=JWT_SECRET="${{ secrets.JWT_SECRET }}" \
+            --from-literal=COHERE_API_KEY="${{ secrets.COHERE_API_KEY }}" \
+            --from-literal=OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+          kubectl create secret generic redpanda-auth \
+            --from-literal=SASL_USERNAME="${{ secrets.SASL_USERNAME }}" \
+            --from-literal=SASL_PASSWORD="${{ secrets.SASL_PASSWORD }}" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Deploy with Helm
+        run: |
+          helm upgrade --install todo-chatbot \
+            ./k8s/helm/todo-chatbot \
+            -f ./k8s/helm/todo-chatbot/values.yaml \
+            -f ./k8s/helm/todo-chatbot/values-cloud.yaml \
+            --set backend.image.tag=${{ github.sha }} \
+            --set frontend.image.tag=${{ github.sha }} \
+            --set recurringTask.image.tag=${{ github.sha }} \
+            --set realtimeSync.image.tag=${{ github.sha }} \
+            --set reminder.image.tag=${{ github.sha }} \
+            --set audit.image.tag=${{ github.sha }} \
+            --wait \
+            --timeout 300s
+
+      - name: Verify rollout status
+        run: |
+          kubectl rollout status deployment/todo-backend --timeout=300s
+          kubectl rollout status deployment/todo-frontend --timeout=300s
+          kubectl rollout status deployment/recurring-task-service --timeout=300s
+          kubectl rollout status deployment/realtime-sync-service --timeout=300s
+          kubectl rollout status deployment/reminder-service --timeout=300s
+          kubectl rollout status deployment/audit-service --timeout=300s
+
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          echo "Deployment failed - rolling back..."
+          helm rollback todo-chatbot 0 --wait --timeout 300s

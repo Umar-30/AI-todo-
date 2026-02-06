@@ -1,0 +1,79 @@
+# Service Inventory Contract
+# Defines all services, their ports, Dapr annotations, and Dockerfile locations
+
+services:
+  - name: todo-backend
+    dapr_app_id: todo-backend
+    port: 8000
+    dapr_enabled: true
+    dockerfile: backend/Dockerfile  # TO CREATE
+    source: backend/
+    helm_key: backend
+    subscriptions: []
+    publishes: [task-events, task-updates]
+
+  - name: todo-frontend
+    dapr_app_id: null  # No Dapr sidecar needed
+    port: 3000
+    dapr_enabled: false
+    dockerfile: AI-todo-new/Dockerfile  # EXISTS
+    source: AI-todo-new/
+    helm_key: frontend
+    subscriptions: []
+    publishes: []
+
+  - name: recurring-task-service
+    dapr_app_id: recurring-task-service
+    port: 8001
+    dapr_enabled: true
+    dockerfile: services/recurring-task-service/Dockerfile  # EXISTS
+    source: services/recurring-task-service/
+    helm_key: recurringTask
+    subscriptions: [task-events]
+    publishes: []
+
+  - name: realtime-sync-service
+    dapr_app_id: realtime-sync-service
+    port: 8002
+    dapr_enabled: true
+    dockerfile: services/realtime-sync-service/Dockerfile  # EXISTS
+    source: services/realtime-sync-service/
+    helm_key: realtimeSync
+    subscriptions: [task-updates]
+    publishes: []
+
+  - name: reminder-service
+    dapr_app_id: reminder-service
+    port: 8003
+    dapr_enabled: true
+    dockerfile: services/reminder-service/Dockerfile  # TO CREATE
+    source: services/reminder-service/
+    helm_key: reminder
+    subscriptions: [task-events]
+    publishes: [reminders]
+
+  - name: audit-service
+    dapr_app_id: audit-service
+    port: 8004
+    dapr_enabled: true
+    dockerfile: services/audit-service/Dockerfile  # TO CREATE
+    source: services/audit-service/
+    helm_key: audit
+    subscriptions: [task-events, task-updates]
+    publishes: []
+
+infrastructure:
+  - name: redpanda
+    local_only: true  # Cloud uses Redpanda Cloud
+    port: 9093
+    manifest: k8s/manifests/redpanda/redpanda-deployment.yaml
+
+  - name: redis
+    local_only: false  # Both environments
+    port: 6379
+    manifest: k8s/manifests/redis/redis-deployment.yaml
+
+topics:
+  - task-events
+  - task-updates
+  - reminders

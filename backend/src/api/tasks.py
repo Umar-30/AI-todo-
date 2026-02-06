@@ -13,7 +13,7 @@ from typing import Optional
 import jwt
 import os
 
-from ..mcp.tools import list_tasks, complete_task, uncomplete_task, delete_task, ValidationError, TaskNotFoundError
+from ..mcp.tools import list_tasks, search_tasks, complete_task, uncomplete_task, delete_task, ValidationError, TaskNotFoundError
 from ..events import task_event_manager
 
 logger = logging.getLogger(__name__)
@@ -51,6 +51,10 @@ class TaskResponse(BaseModel):
     due_date: Optional[str]
     priority: Optional[str]
     category: Optional[str]
+    tags: Optional[list[str]] = None
+    reminder_time: Optional[str] = None
+    recurrence_pattern: Optional[str] = None
+    recurrence_end_date: Optional[str] = None
     created_at: str
     updated_at: str
 
@@ -128,6 +132,49 @@ async def get_tasks(
     except Exception as e:
         logger.error(f"Error fetching tasks: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch tasks")
+
+
+@router.get(
+    "/tasks/search",
+    response_model=TaskListResponse,
+    responses={
+        200: {"description": "Search results"},
+        401: {"description": "Unauthorized"},
+    },
+    summary="Search, filter, and sort tasks",
+    description="T077-T082: Search tasks by text, filter by status/priority/tags, sort by fields.",
+)
+async def search_tasks_endpoint(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    q: Optional[str] = None,
+    status: Optional[str] = None,
+    priority: Optional[str] = None,
+    tags: Optional[str] = None,
+    sort_by: Optional[str] = None,
+    sort_order: Optional[str] = None,
+) -> TaskListResponse:
+    """Search, filter, and sort tasks."""
+    user_data = verify_token(credentials.credentials)
+    user_id = user_data.get("sub")
+
+    try:
+        tag_list = tags.split(",") if tags else None
+        tasks = search_tasks(
+            user_id=user_id,
+            query=q,
+            status=status,
+            priority=priority,
+            tags=tag_list,
+            sort_by=sort_by,
+            sort_order=sort_order,
+        )
+        return TaskListResponse(tasks=tasks)
+
+    except ValidationError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error searching tasks: {e}")
+        raise HTTPException(status_code=500, detail="Failed to search tasks")
 
 
 class DeleteResponse(BaseModel):

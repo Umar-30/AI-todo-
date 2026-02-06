@@ -1,0 +1,13 @@
+# T063: Dapr Cron binding for reminder checks
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: cron-reminder
+spec:
+  type: bindings.cron
+  version: v1
+  metadata:
+    - name: schedule
+      value: "@every 1m"
+    - name: route
+      value: /reminders/check

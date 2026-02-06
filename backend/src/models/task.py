@@ -2,11 +2,13 @@
 Task model for Todo AI Chatbot.
 
 Represents a todo item belonging to a user.
+Enhanced with recurring tasks, tags, and reminder support (Phase V).
 """
 from datetime import datetime, timezone
-from typing import Optional
+from typing import List, Optional
 from uuid import UUID, uuid4
 
+from sqlalchemy import Column, ARRAY, String
 from sqlmodel import Field, SQLModel
 
 
@@ -22,6 +24,12 @@ class Task(SQLModel, table=True):
         completed: Completion status (default: False)
         priority: Priority level - high, medium, low (optional)
         category: User-defined category (optional)
+        tags: Array of user-defined tags (T014)
+        due_date: Task deadline (optional)
+        reminder_time: When to send reminder (T015)
+        recurrence_pattern: daily, weekly, monthly (T016)
+        recurrence_end_date: When recurrence stops (T017)
+        parent_task_id: Links recurring instances (T018)
         created_at: Creation timestamp (auto-set, UTC)
         updated_at: Last modification timestamp (auto-update, UTC)
     """
@@ -58,9 +66,37 @@ class Task(SQLModel, table=True):
         max_length=50,
         description="User-defined category (optional)",
     )
+    # T014: Tags field (array of strings)
+    tags: Optional[List[str]] = Field(
+        default=None,
+        sa_column=Column(ARRAY(String), nullable=True),
+        description="Array of user-defined tags (max 10 items)",
+    )
     due_date: Optional[datetime] = Field(
         default=None,
         description="Due date for the task (optional)",
+    )
+    # T015: Reminder time field
+    reminder_time: Optional[datetime] = Field(
+        default=None,
+        description="When to send reminder (UTC, optional)",
+    )
+    # T016: Recurrence pattern field
+    recurrence_pattern: Optional[str] = Field(
+        default=None,
+        max_length=20,
+        description="Recurrence pattern: daily, weekly, monthly (optional)",
+    )
+    # T017: Recurrence end date field
+    recurrence_end_date: Optional[datetime] = Field(
+        default=None,
+        description="When recurrence stops (UTC, optional)",
+    )
+    # T018: Parent task ID for recurring instances
+    parent_task_id: Optional[UUID] = Field(
+        default=None,
+        foreign_key="tasks.id",
+        description="Links recurring task instances to original task",
     )
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),

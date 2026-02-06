@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://todo-chatbot.local/schemas/task-event.json",
+  "title": "TaskEvent",
+  "description": "CloudEvents envelope for task lifecycle events",
+  "type": "object",
+  "required": ["specversion", "type", "source", "id", "time", "data"],
+  "properties": {
+    "specversion": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "type": {
+      "type": "string",
+      "enum": ["task.created", "task.updated", "task.completed", "task.deleted"]
+    },
+    "source": {
+      "type": "string",
+      "description": "Service that emitted the event"
+    },
+    "id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique event identifier"
+    },
+    "time": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Event timestamp in ISO8601 format"
+    },
+    "datacontenttype": {
+      "type": "string",
+      "default": "application/json"
+    },
+    "subject": {
+      "type": "string",
+      "description": "Subject identifier (e.g., task:{taskId})"
+    },
+    "correlationid": {
+      "type": "string",
+      "description": "Correlation ID for distributed tracing"
+    },
+    "data": {
+      "$ref": "#/$defs/TaskEventData"
+    }
+  },
+  "$defs": {
+    "TaskEventData": {
+      "type": "object",
+      "required": ["taskId", "userId"],
+      "properties": {
+        "taskId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "userId": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 255
+        },
+        "description": {
+          "type": ["string", "null"]
+        },
+        "priority": {
+          "type": ["string", "null"],
+          "enum": ["high", "medium", "low", null]
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "completed"]
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 50
+          },
+          "maxItems": 10
+        },
+        "dueDate": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        },
+        "reminderTime": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        },
+        "recurrence": {
+          "type": ["object", "null"],
+          "properties": {
+            "pattern": {
+              "type": "string",
+              "enum": ["daily", "weekly", "monthly"]
+            },
+            "endDate": {
+              "type": ["string", "null"],
+              "format": "date-time"
+            }
+          }
+        },
+        "previousValues": {
+          "type": "object",
+          "description": "Changed fields before update (for task.updated events)",
+          "additionalProperties": true
+        }
+      }
+    }
+  }
+}

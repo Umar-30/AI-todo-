@@ -1,0 +1,72 @@
+# T041: K8s deployment with Dapr annotations for recurring-task-service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: recurring-task-service
+  labels:
+    app: recurring-task-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: recurring-task-service
+  template:
+    metadata:
+      labels:
+        app: recurring-task-service
+      annotations:
+        # Dapr sidecar annotations
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "recurring-task-service"
+        dapr.io/app-port: "8001"
+        dapr.io/enable-api-logging: "true"
+    spec:
+      containers:
+        - name: recurring-task-service
+          image: recurring-task-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8001
+          env:
+            - name: PORT
+              value: "8001"
+            - name: DAPR_HTTP_PORT
+              value: "3500"
+            - name: DAPR_PUBSUB_NAME
+              value: "pubsub-redpanda"
+            - name: BACKEND_APP_ID
+              value: "todo-backend"
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8001
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8001
+            initialDelaySeconds: 5
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: recurring-task-service
+  labels:
+    app: recurring-task-service
+spec:
+  selector:
+    app: recurring-task-service
+  ports:
+    - port: 80
+      targetPort: 8001
+      protocol: TCP
+  type: ClusterIP

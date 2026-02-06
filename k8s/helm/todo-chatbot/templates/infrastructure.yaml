@@ -1,0 +1,123 @@
+{{- if .Values.infrastructure.redis.enabled }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: redis
+  labels:
+    app: redis
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: redis
+  labels:
+    app: redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+        - name: redis
+          image: {{ .Values.infrastructure.redis.image }}
+          ports:
+            - containerPort: {{ .Values.infrastructure.redis.port }}
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: redis
+spec:
+  type: ClusterIP
+  selector:
+    app: redis
+  ports:
+    - port: {{ .Values.infrastructure.redis.port }}
+      targetPort: {{ .Values.infrastructure.redis.port }}
+{{- end }}
+---
+{{- if .Values.infrastructure.redpanda.enabled }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: redpanda
+  labels:
+    app: redpanda
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redpanda
+  namespace: redpanda
+  labels:
+    app: redpanda
+spec:
+  replicas: 1
+  serviceName: redpanda
+  selector:
+    matchLabels:
+      app: redpanda
+  template:
+    metadata:
+      labels:
+        app: redpanda
+    spec:
+      containers:
+        - name: redpanda
+          image: {{ .Values.infrastructure.redpanda.image }}
+          args:
+            - redpanda
+            - start
+            - --smp
+            - "1"
+            - --memory
+            - 512M
+            - --overprovisioned
+            - --kafka-addr
+            - PLAINTEXT://0.0.0.0:{{ .Values.infrastructure.redpanda.kafkaPort }},INTERNAL://0.0.0.0:{{ .Values.infrastructure.redpanda.internalPort }}
+            - --advertise-kafka-addr
+            - PLAINTEXT://redpanda.redpanda.svc.cluster.local:{{ .Values.infrastructure.redpanda.kafkaPort }},INTERNAL://redpanda.redpanda.svc.cluster.local:{{ .Values.infrastructure.redpanda.internalPort }}
+          ports:
+            - containerPort: {{ .Values.infrastructure.redpanda.kafkaPort }}
+              name: kafka
+            - containerPort: {{ .Values.infrastructure.redpanda.internalPort }}
+              name: kafka-internal
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redpanda
+  namespace: redpanda
+spec:
+  type: ClusterIP
+  selector:
+    app: redpanda
+  ports:
+    - name: kafka
+      port: {{ .Values.infrastructure.redpanda.kafkaPort }}
+      targetPort: {{ .Values.infrastructure.redpanda.kafkaPort }}
+    - name: kafka-internal
+      port: {{ .Values.infrastructure.redpanda.internalPort }}
+      targetPort: {{ .Values.infrastructure.redpanda.internalPort }}
+{{- end }}
