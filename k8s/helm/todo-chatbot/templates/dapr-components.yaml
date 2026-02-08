@@ -16,8 +16,8 @@ spec:
     - name: consumeRetryInterval
       value: "100ms"
     {{- if .Values.dapr.pubsub.authRequired }}
-    - name: authRequired
-      value: "true"
+    - name: authType
+      value: "password"
     - name: saslUsername
       value: {{ .Values.dapr.pubsub.sasl.username | quote }}
     - name: saslPassword
@@ -26,8 +26,9 @@ spec:
         key: SASL_PASSWORD
     - name: saslMechanism
       value: {{ .Values.dapr.pubsub.sasl.mechanism | quote }}
+    {{- else }}
     - name: authType
-      value: "password"
+      value: "none"
     {{- end }}
 {{- end }}
 ---

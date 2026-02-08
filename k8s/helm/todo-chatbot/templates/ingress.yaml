@@ -1,0 +1,32 @@
+{{- $lbHost := .Values.ingress.host | default "todo-chatbot.local" -}}
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "todo-chatbot.fullname" . }}-ingress
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/proxy-body-size: "25m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    {{- if .Values.ingress.sseSupport }}
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    {{- end }}
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - {{ $lbHost }}
+      secretName: todo-chatbot-tls
+  rules:
+    - host: {{ $lbHost }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: todo-frontend-svc
+                port:
+                  number: {{ .Values.frontend.port }}
+{{- end }}

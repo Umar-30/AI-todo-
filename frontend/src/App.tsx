@@ -1,10 +1,12 @@
 import { useCallback, useRef, useState, useEffect } from 'react'
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import { ChatKitPanel } from './components/ChatKitPanel'
 import { TaskSidebar } from './components/TaskSidebar'
 import { VoiceInput } from './components/VoiceInput'
 import { useTasks } from './hooks/useTasks'
 import { useVoiceInput } from './hooks/useVoiceInput'
+import { useAuth } from './hooks/useAuth'
+import { signOut } from './services/authService'
 import LandingPage from './pages/LandingPage'
 import SignupPage from './pages/SignupPage'
 import LoginPage from './pages/LoginPage'
@@ -31,7 +33,14 @@ function App() {
 
 function ChatBotPage() {
   const { tasks, isLoading, error, refresh, isStreamConnected } = useTasks()
+  const { user } = useAuth()
+  const navigate = useNavigate()
   const sidebarRef = useRef<{ refresh: () => void }>({ refresh })
+
+  const handleLogout = useCallback(async () => {
+    await signOut()
+    navigate('/login')
+  }, [navigate])
 
   // Voice input hook for the top voice input
   const {
@@ -95,6 +104,12 @@ function ChatBotPage() {
             <div className="neon-border"></div>
           </div>
           <p className="header-subtitle">Manage your tasks with natural language</p>
+        </div>
+        <div className="header-user">
+          {user && <span className="header-email">{user.email}</span>}
+          <button className="logout-button" onClick={handleLogout}>
+            Logout
+          </button>
         </div>
       </header>
 

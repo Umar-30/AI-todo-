@@ -26,6 +26,10 @@ spec:
         dapr.io/enable-api-logging: "true"
       {{- end }}
     spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
         - name: backend
           image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
@@ -57,6 +61,12 @@ spec:
                 secretKeyRef:
                   name: todo-secrets
                   key: OPENAI_API_KEY
+                  optional: true
+            - name: OPENROUTE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: todo-secrets
+                  key: OPENROUTE_API_KEY
                   optional: true
           envFrom:
             - configMapRef:

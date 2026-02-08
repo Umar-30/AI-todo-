@@ -4,71 +4,82 @@
 # GHCR images - update with your GitHub org/user
 backend:
   image:
-    repository: ghcr.io/YOUR_GITHUB_ORG/todo-backend
+    repository: ghcr.io/umar-30/todo-backend
     tag: latest
     pullPolicy: Always
-  replicas: 2
+  replicas: 1
 
 frontend:
   image:
-    repository: ghcr.io/YOUR_GITHUB_ORG/todo-frontend
+    repository: ghcr.io/umar-30/todo-frontend
     tag: latest
     pullPolicy: Always
-  replicas: 2
+  replicas: 1
+  port: 3000
+  nodePort: 30080
 
 recurringTask:
   image:
-    repository: ghcr.io/YOUR_GITHUB_ORG/recurring-task-service
+    repository: ghcr.io/umar-30/recurring-task-service
     tag: latest
     pullPolicy: Always
-  replicas: 2
+  replicas: 1
 
 realtimeSync:
   image:
-    repository: ghcr.io/YOUR_GITHUB_ORG/realtime-sync-service
+    repository: ghcr.io/umar-30/realtime-sync-service
     tag: latest
     pullPolicy: Always
-  replicas: 2
+  replicas: 1
 
 reminder:
   image:
-    repository: ghcr.io/YOUR_GITHUB_ORG/reminder-service
+    repository: ghcr.io/umar-30/reminder-service
     tag: latest
     pullPolicy: Always
-  replicas: 2
+  replicas: 1
 
 audit:
   image:
-    repository: ghcr.io/YOUR_GITHUB_ORG/audit-service
+    repository: ghcr.io/umar-30/audit-service
     tag: latest
     pullPolicy: Always
-  replicas: 2
+  replicas: 1
 
-# Dapr: Redpanda Cloud Serverless with SASL/SCRAM auth
+# Dapr: In-cluster Redpanda + Redis (upgrade to managed later)
 dapr:
   pubsub:
     name: pubsub-redpanda
     type: pubsub.kafka
-    brokers: "YOUR_REDPANDA_CLOUD_BOOTSTRAP_URL:9092"
-    consumerGroup: "todo-chatbot-cloud"
-    authRequired: true
-    sasl:
-      username: "YOUR_SASL_USERNAME"
-      password: ""  # Set via K8s secret redpanda-auth
-      mechanism: "SCRAM-SHA-256"
+    brokers: "redpanda.redpanda.svc.cluster.local:9093"
+    consumerGroup: "todo-chatbot"
+    authRequired: false
   statestore:
     name: statestore-redis
     type: state.redis
-    host: "YOUR_MANAGED_REDIS_HOST:6379"
-    password: ""  # Set via K8s secret if needed
+    host: "redis.redis.svc.cluster.local:6379"
+    password: ""
     actorStateStore: true
 
-# Infrastructure disabled for cloud - use managed services
+# Infrastructure enabled - deploy Redis + Redpanda in cluster
 infrastructure:
   redis:
-    enabled: false
+    enabled: true
+    image: redis:7-alpine
+    port: 6379
   redpanda:
-    enabled: false
+    enabled: true
+    image: redpandadata/redpanda:latest
+    kafkaPort: 9092
+    internalPort: 9093
+
+imagePullSecrets:
+  - name: ghcr-secret
+
+ingress:
+  enabled: true
+  host: "143-244-215-56.sslip.io"
+  sseSupport: true
 
 config:
   logLevel: "INFO"

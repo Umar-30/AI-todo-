@@ -28,6 +28,37 @@ body {
   padding: var(--spacing-lg);
   text-align: center;
   border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.header-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-email {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.logout-button {
+  padding: 8px 18px;
+  background: transparent;
+  color: #ff4d6a;
+  border: 1px solid #ff4d6a;
+  border-radius: var(--radius-md, 8px);
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.logout-button:hover {
+  background: #ff4d6a;
+  color: #fff;
 }
 
 .app-header h1 {
@@ -1290,7 +1321,86 @@ body {
    Responsive Styles
    ======================================== */
 
+/* Tablet landscape & small desktop */
+@media (max-width: 1024px) {
+  .chat-task-split-layout {
+    gap: var(--spacing-sm);
+  }
+
+  .voice-input-container {
+    max-width: 100%;
+  }
+}
+
+/* Tablet portrait */
 @media (max-width: 768px) {
+  /* Header: stack vertically */
+  .app-header {
+    flex-direction: column;
+    gap: 12px;
+    padding: var(--spacing-md);
+  }
+
+  .header-content {
+    gap: var(--spacing-sm);
+  }
+
+  .header-user {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .app-header h1 {
+    font-size: 1.4rem;
+  }
+
+  .header-subtitle {
+    font-size: 0.8rem;
+  }
+
+  /* Chat/Task: single column stack */
+  .chat-task-split-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm);
+  }
+
+  .chat-input-section, .task-dashboard-section {
+    min-height: 40vh;
+  }
+
+  /* Voice input bar */
+  .top-voice-input {
+    padding: var(--spacing-sm);
+  }
+
+  .voice-input-container {
+    padding: var(--spacing-sm) var(--spacing-md);
+    gap: var(--spacing-sm);
+  }
+
+  .voice-send-button {
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-size: 0.9rem;
+  }
+
+  .section-title {
+    padding: var(--spacing-sm);
+    font-size: 1rem;
+  }
+
+  /* ChatKit panel */
+  .chatkit-panel {
+    height: auto;
+    min-height: 300px;
+  }
+
+  .chatkit-message {
+    max-width: 85%;
+  }
+
+  /* Landing page */
   .app-title {
     font-size: 2.5rem;
   }
@@ -1306,6 +1416,10 @@ body {
 
   .hero-subtitle {
     font-size: 1.2rem;
+  }
+
+  .hero-description {
+    max-width: 100%;
   }
 
   .features-section {
@@ -1337,38 +1451,166 @@ body {
   .stat-number {
     font-size: 1.2rem;
   }
+}
 
-  /* New layout responsiveness */
-  .chat-task-split-layout {
-    grid-template-columns: 1fr;
-    grid-template-rows: 1fr 1fr;
-    gap: var(--spacing-sm);
+/* Mobile */
+@media (max-width: 480px) {
+  /* Header: compact */
+  .app-header {
     padding: var(--spacing-sm);
+  }
+
+  .app-header h1 {
+    font-size: 1.2rem;
+  }
+
+  .header-email {
+    font-size: 0.75rem;
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .logout-button {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+  }
+
+  /* Voice bar: stack mic + input vertically */
+  .voice-input-container {
+    flex-wrap: wrap;
+    padding: var(--spacing-sm);
+    gap: var(--spacing-xs);
+  }
+
+  .voice-text-field {
+    min-width: 0;
+    flex: 1 1 60%;
+    font-size: 0.9rem;
+    padding: var(--spacing-xs) var(--spacing-sm);
+  }
+
+  .voice-send-button {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: 0.85rem;
+  }
+
+  .voice-input-button {
+    width: 38px;
+    height: 38px;
+  }
+
+  /* Chat/Task: full width stacked */
+  .chat-task-split-layout {
+    padding: var(--spacing-xs);
+    gap: var(--spacing-xs);
   }
 
   .chat-input-section, .task-dashboard-section {
-    min-height: 40vh;
-  }
-
-  .top-voice-input {
-    padding: var(--spacing-sm);
-  }
-
-  .voice-input-placeholder {
-    padding: var(--spacing-sm);
-    font-size: 0.9rem;
+    min-height: 35vh;
+    border-radius: var(--radius-md);
   }
 
   .section-title {
-    padding: var(--spacing-sm);
-    font-size: 1rem;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: 0.9rem;
   }
-}
 
-@media (max-width: 480px) {
+  /* Chat messages wider */
+  .chatkit-message {
+    max-width: 92%;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9rem;
+  }
+
+  .chatkit-input-form {
+    padding: var(--spacing-sm);
+    gap: var(--spacing-xs);
+  }
+
+  .chatkit-input {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9rem;
+  }
+
+  .chatkit-send-button {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+  }
+
+  /* Task cards compact */
+  .task-card {
+    padding: var(--spacing-sm);
+  }
+
+  .task-card-title {
+    font-size: 0.85rem;
+  }
+
   .task-card-meta {
     flex-direction: column;
     gap: 4px;
+  }
+
+  .task-action-btn {
+    width: 24px;
+    height: 24px;
+    font-size: 0.8rem;
+  }
+
+  /* Landing page */
+  .landing-container {
+    padding: 0 var(--spacing-sm);
+  }
+
+  .app-title {
+    font-size: 1.8rem;
+    letter-spacing: 1px;
+  }
+
+  .smart-title {
+    font-size: 1.5rem;
+  }
+
+  .hero-subtitle {
+    font-size: 1rem;
+  }
+
+  .hero-description {
+    font-size: 0.95rem;
+  }
+
+  .mockup-container {
+    max-width: 100%;
+  }
+
+  .mockup-content {
+    min-height: 200px;
+    padding: var(--spacing-sm);
+  }
+
+  .feature-card {
+    flex: 1 1 100%;
+  }
+
+  .feature-icon {
+    font-size: 2rem;
+  }
+
+  .feature-card h3 {
+    font-size: 1rem;
+  }
+
+  .feature-card p {
+    font-size: 0.8rem;
+  }
+
+  .cta-button {
+    padding: var(--spacing-md) var(--spacing-lg);
+    font-size: 1rem;
+    width: 100%;
+    justify-content: center;
   }
 
   .header-stats {
@@ -1381,37 +1623,40 @@ body {
     width: 100%;
     max-width: 200px;
   }
+}
 
-  .landing-container {
-    padding: 0 var(--spacing-sm);
+/* Very small screens */
+@media (max-width: 360px) {
+  .app-header h1 {
+    font-size: 1rem;
+  }
+
+  .header-user {
+    gap: 8px;
+  }
+
+  .header-email {
+    display: none;
   }
 
   .app-title {
-    font-size: 2rem;
+    font-size: 1.5rem;
   }
 
   .smart-title {
-    font-size: 1.5rem;
+    font-size: 1.3rem;
   }
 
-  .hero-subtitle {
-    font-size: 1rem;
+  .chat-task-split-layout {
+    grid-template-rows: 1fr auto;
   }
 
-  .cta-button {
-    padding: var(--spacing-md) var(--spacing-lg);
-    font-size: 1rem;
+  .chatkit-welcome ul {
+    text-align: left;
   }
 
-  .app-header {
-    padding: var(--spacing-md);
-  }
-
-  .app-header h1 {
-    font-size: 1.5rem;
-  }
-
-  .chatkit-message {
-    max-width: 90%;
+  .chatkit-welcome li {
+    font-size: 0.8rem;
+    padding: var(--spacing-xs) var(--spacing-sm);
   }
 }

@@ -162,6 +162,12 @@ infrastructure:
     kafkaPort: 9092
     internalPort: 9093
 
+# Ingress (disabled by default)
+ingress:
+  enabled: false
+  host: "todo-chatbot.local"
+  sseSupport: false
+
 # Application configuration
 config:
   logLevel: "INFO"

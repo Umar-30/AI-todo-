@@ -2,6 +2,7 @@
 
 const TOKEN_KEY = 'auth_token';
 const USER_KEY = 'auth_user';
+const SESSION_KEY = 'todo-ai-chatbot-session';
 
 interface User {
   id: string;
@@ -50,6 +51,7 @@ const storeAuth = (token: string, user: User) => {
 const clearAuth = () => {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
+  localStorage.removeItem(SESSION_KEY);
 };
 
 export const signIn = async (email: string, password: string): Promise<AuthResponse> => {
@@ -77,6 +79,8 @@ export const signIn = async (email: string, password: string): Promise<AuthRespo
       emailVerified: true
     };
 
+    // Clear previous user's chat session before storing new auth
+    localStorage.removeItem(SESSION_KEY);
     storeAuth(data.access_token, user);
 
     return {

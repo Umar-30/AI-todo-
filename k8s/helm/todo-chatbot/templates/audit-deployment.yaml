@@ -21,6 +21,10 @@ spec:
         dapr.io/enable-api-logging: "true"
       {{- end }}
     spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
         - name: audit
           image: "{{ .Values.audit.image.repository }}:{{ .Values.audit.image.tag }}"
